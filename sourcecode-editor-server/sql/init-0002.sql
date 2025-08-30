@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS projects (
+    projectId VARCHAR(50) NOT NULL,
+    name VARCHAR(2000) NOT NULL,
+    info TEXT NOT NULL
+);

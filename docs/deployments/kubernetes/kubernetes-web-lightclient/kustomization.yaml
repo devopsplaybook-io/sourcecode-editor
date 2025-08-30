@@ -6,7 +6,9 @@ resources:
   - base/pvc.yaml
   - base/deployment.yaml
   - base/service.yaml
+  - base/rbac.yaml
+  - base/configmap.yaml
 images:
   - name: sourcecode-editor
     newTag: latest
-    newName: didierhoarau/sourcecode-editor
+    newName: devopsplaybookio/sourcecode-editor

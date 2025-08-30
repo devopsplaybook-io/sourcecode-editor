@@ -7,33 +7,92 @@
           <th>Pod</th>
           <th>Status</th>
           <th>Age</th>
+          <th>Ready</th>
+          <th>Restarts</th>
           <th>Details</th>
           <th>Logs</th>
           <th>Delete</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="kubeObject of kubernetesObjectStore.data.pods" v-bind:key="kubeObject.metadata.uuid">
+        <tr
+          v-for="kubeObject of kubernetesObjectStore.data.pods"
+          v-bind:key="kubeObject.metadata.uuid"
+        >
           <td>{{ kubeObject.metadata.namespace }}</td>
           <td>{{ kubeObject.metadata.name }}</td>
           <td>{{ kubeObject.status.phase }}</td>
-          <td>{{ UtilsRelativeTime(kubeObject.metadata.creationTimestamp) }}</td>
+          <td>
+            {{ UtilsRelativeTime(kubeObject.metadata.creationTimestamp) }}
+          </td>
+          <td>
+            {{
+              (() => {
+                const statuses = kubeObject.status?.containerStatuses || [];
+                const readyCount = statuses.filter((s) => s.ready).length;
+                const totalCount = statuses.length;
+                return `${readyCount}/${totalCount}`;
+              })()
+            }}
+          </td>
+          <td>
+            {{
+              (() => {
+                const statuses = kubeObject.status?.containerStatuses || [];
+                return statuses.reduce(
+                  (sum, s) => sum + (s.restartCount || 0),
+                  0
+                );
+              })()
+            }}
+            ({{
+              (() => {
+                const statuses = kubeObject.status?.containerStatuses || [];
+                // Find the latest restart time among all containers
+                const lastRestart = statuses
+                  .map(
+                    (s) =>
+                      s.state?.terminated?.finishedAt ||
+                      s.lastState?.terminated?.finishedAt
+                  )
+                  .filter(Boolean)
+                  .sort()
+                  .reverse()[0];
+                return lastRestart ? UtilsRelativeTime(lastRestart) : "-";
+              })()
+            }})
+          </td>
           <td>
             <i
               class="bi bi-file-text-fill"
-              v-on:click="showDetails(kubeObject.metadata.namespace, kubeObject.metadata.name)"
+              v-on:click="
+                showDetails(
+                  kubeObject.metadata.namespace,
+                  kubeObject.metadata.name
+                )
+              "
             ></i>
           </td>
           <td>
             <i
               class="bi bi-file-text-fill"
-              v-on:click="showLogs(kubeObject.metadata.namespace, kubeObject.metadata.name)"
+              v-on:click="
+                showLogs(
+                  kubeObject.metadata.namespace,
+                  kubeObject.metadata.name
+                )
+              "
             ></i>
           </td>
           <td>
             <i
               class="bi bi-x-circle-fill"
-              v-on:click="podDelete(kubeObject.metadata.namespace, kubeObject.metadata.name)"
+              v-on:click="
+                podDelete(
+                  kubeObject.metadata.namespace,
+                  kubeObject.metadata.name
+                )
+              "
             ></i>
           </td>
         </tr>
@@ -43,6 +102,13 @@
       v-if="dialogDetails.enable"
       :text="dialogDetails.text"
       :title="dialogDetails.title"
+      @onClose="onCloseDetails()"
+    />
+    <DialogLogs
+      v-if="dialogLogs.enable"
+      :podname="dialogLogs.podname"
+      :namespace="dialogLogs.namespace"
+      :title="dialogLogs.title"
       @onClose="onCloseDetails()"
     />
   </div>
@@ -68,6 +134,11 @@ export default {
         title: "",
         text: "",
       },
+      dialogLogs: {
+        enable: false,
+        podname: "",
+        namespace: "",
+      },
     };
   },
   async created() {
@@ -81,7 +152,13 @@ export default {
       await axios
         .post(
           `${(await Config.get()).SERVER_URL}/kubectl/command`,
-          { namespace, object: "pods", command: "delete", argument: podname, noJson: true },
+          {
+            namespace,
+            object: "pods",
+            command: "delete",
+            argument: podname,
+            noJson: true,
+          },
           await AuthService.getAuthHeader()
         )
         .then(() => {
@@ -89,7 +166,9 @@ export default {
             type: "info",
             text: "Pod Deleted",
           });
-          KubernetesObjectStore().getPods();
+          setTimeout(() => {
+            KubernetesObjectStore().getPods();
+          }, 1000);
         })
         .catch(handleError);
     },
@@ -98,6 +177,11 @@ export default {
         enable: false,
         title: "",
         text: "",
+      };
+      this.dialogLogs = {
+        enable: false,
+        podname: "",
+        namespace: "",
       };
     },
     async showDetails(namespace, objectName) {
@@ -109,7 +193,13 @@ export default {
       await axios
         .post(
           `${(await Config.get()).SERVER_URL}/kubectl/command`,
-          { namespace, object: "pod", command: "describe", argument: objectName, noJson: true },
+          {
+            namespace,
+            object: "pod",
+            command: "describe",
+            argument: objectName,
+            noJson: true,
+          },
           await AuthService.getAuthHeader()
         )
         .then(async (res) => {
@@ -118,21 +208,11 @@ export default {
         .catch(handleError);
     },
     async showLogs(namespace, podname) {
-      this.dialogDetails = {
+      this.dialogLogs = {
         enable: true,
-        title: "Pod Log",
-        text: "",
+        podname,
+        namespace,
       };
-      await axios
-        .post(
-          `${(await Config.get()).SERVER_URL}/kubectl/logs`,
-          { namespace, pod: podname },
-          await AuthService.getAuthHeader()
-        )
-        .then(async (res) => {
-          this.dialogDetails.text = await UtilsDecompressData(res.data.result);
-        })
-        .catch(handleError);
     },
   },
 };

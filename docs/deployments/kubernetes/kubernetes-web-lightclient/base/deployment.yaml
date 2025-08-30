@@ -15,9 +15,13 @@ spec:
       labels:
         app: sourcecode-editor
     spec:
+      serviceAccountName: sourcecode-editor-role
       containers:
         - image: sourcecode-editor
           name: sourcecode-editor
+          env:
+            - name: APPLICATION_TITLE
+              value: Kubernetes
           resources:
             limits:
               memory: 500Mi
@@ -28,8 +32,21 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: pod-volume
+            - name: config-volume
+              mountPath: /opt/app/sourcecode-editor/config.json
+              subPath: config.json
           imagePullPolicy: Always
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
       volumes:
         - name: pod-volume
           persistentVolumeClaim:
             claimName: sourcecode-editor
+        - name: config-volume
+          configMap:
+            name: sourcecode-editor-config

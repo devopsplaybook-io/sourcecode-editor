@@ -11,6 +11,7 @@
     <div id="object-actions" class="actions">
       <select v-model="objectType">
         <option value="node">Nodes</option>
+        <option value="namespace">Namespaces</option>
         <option value="deployment">Deployments</option>
         <option value="statefulset">StatefulSets</option>
         <option value="daemonset">DaemonSets</option>
@@ -21,10 +22,13 @@
         <option value="configmap">ConfigMap</option>
         <option value="secret">Secrets</option>
       </select>
-      <span><i class="bi bi-arrow-clockwise" v-on:click="refreshObject()"></i></span>
+      <span
+        ><i class="bi bi-arrow-clockwise" v-on:click="refreshObject()"></i
+      ></span>
     </div>
     <div id="object-list">
       <KubernetesNodeList v-if="objectType == 'node'" />
+      <KubernetesNamespaceList v-if="objectType == 'namespace'" />
       <KubernetesDeploymentList v-if="objectType == 'deployment'" />
       <KubernetesPodList v-else-if="objectType == 'pod'" />
       <KubernetesStatefulSetList v-else-if="objectType == 'statefulset'" />
@@ -40,18 +44,71 @@
 
 <script>
 import { debounce } from "lodash";
+import { RefreshIntervalService } from "~~/services/RefreshIntervalService";
 
 export default {
   data() {
     return {
       objectType: "pod",
       searchFilter: "",
+      refreshIntervalId: null,
+      refreshIntervalValue: RefreshIntervalService.get(),
     };
   },
   async created() {
     if (!(await AuthenticationStore().ensureAuthenticated())) {
       useRouter().push({ path: "/users" });
     }
+    const route = useRoute();
+    if (route.query.objectType) {
+      this.objectType = route.query.objectType;
+    }
+    if (route.query.search) {
+      this.searchFilter = route.query.search;
+      KubernetesObjectStore().setFilter(this.searchFilter);
+    }
+    this.refreshIntervalValue = RefreshIntervalService.get();
+  },
+  mounted() {
+    const interval = parseInt(this.refreshIntervalValue, 10);
+    if (interval > 0) {
+      this.refreshIntervalId = setInterval(() => {
+        this.refreshObject();
+      }, interval);
+    }
+  },
+  beforeUnmount() {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
+  },
+  watch: {
+    objectType(newType) {
+      const router = useRouter();
+      const route = useRoute();
+      router.replace({
+        path: route.path,
+        query: {
+          ...route.query,
+          objectType: newType,
+          ...(this.searchFilter ? { search: this.searchFilter } : {}),
+        },
+      });
+    },
+    searchFilter(newFilter) {
+      const router = useRouter();
+      const route = useRoute();
+      const query = { ...route.query, objectType: this.objectType };
+      if (newFilter) {
+        query.search = newFilter;
+      } else {
+        delete query.search;
+      }
+      router.replace({
+        path: route.path,
+        query,
+      });
+    },
   },
   methods: {
     refreshObject() {
@@ -65,6 +122,10 @@ export default {
 </script>
 
 <style>
+select {
+  padding: 0.5em 1em;
+  height: 2.6rem;
+}
 #object-layout {
   display: grid;
   max-height: 100%;
@@ -74,10 +135,6 @@ export default {
 #object-actions {
   display: grid;
   grid-template-columns: 1fr auto;
-}
-#object-actions select {
-  padding: 0.5em 1em;
-  height: 2.6rem;
 }
 #object-actions span {
   padding-top: 0.3rem;
