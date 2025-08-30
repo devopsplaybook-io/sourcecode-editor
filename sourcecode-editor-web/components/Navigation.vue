@@ -2,22 +2,22 @@
   <nav>
     <ul class="menu-links">
       <li>
-        <NuxtLink to="/"><strong>Kubernetes Web</strong></NuxtLink>
+        <NuxtLink to="/"><strong>Code</strong></NuxtLink>
       </li>
     </ul>
     <ul class="menu-links">
       <li v-if="authenticationStore.isAuthenticated">
         <NuxtLink
-          to="/kubernetes"
-          :class="activeRoute == '/kubernetes' ? 'active' : 'inactive'"
-          ><i class="bi bi-robot"></i
+          to="/code"
+          :class="activeRoute == '/code' ? 'active' : 'inactive'"
+          ><i class="bi bi-braces-asterisk"></i
         ></NuxtLink>
       </li>
       <li v-if="authenticationStore.isAuthenticated">
         <NuxtLink
           to="/projects"
           :class="activeRoute == '/projects' ? 'active' : 'inactive'"
-          ><i class="bi bi-speedometer"></i
+          ><i class="bi bi-journals"></i
         ></NuxtLink>
       </li>
       <li>

@@ -20,7 +20,7 @@ RUN cd sourcecode-editor-web && \
 # RUN
 FROM node:22-alpine
 
-RUN apk add --no-cache kubectl gzip
+RUN apk add --no-cache kubectl gzip git openssh
 
 COPY entrypoint.sh /entrypoint.sh
 

@@ -1,5 +1,5 @@
 import { OTelRequestSpan } from "@devopsplaybook.io/otel-utils-fastify";
-import { FastifyInstance, RequestGenericInterface } from "fastify";
+import { FastifyInstance } from "fastify";
 import { Project } from "../model/Project";
 import {
   ProjectsDataAdd,
@@ -7,25 +7,32 @@ import {
   ProjectsDataList,
   ProjectsDataUpdate,
 } from "./ProjectsData";
+import { AuthGetUserSession } from "../users/Auth";
+import { ProjectsSyncGetStatusProject } from "./ProjectsSync";
 
 export class ProjectsRoutes {
   //
   public async getRoutes(fastify: FastifyInstance): Promise<void> {
     //
     fastify.get("/", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
       res
         .status(200)
         .send({ projects: await ProjectsDataList(OTelRequestSpan(req)) });
     });
 
-    interface PostProject extends RequestGenericInterface {
+    fastify.post<{
       Body: {
         name: string;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         info: any;
       };
-    }
-    fastify.post<PostProject>("/", async (req, res) => {
+    }>("/", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
       if (!req.body.name) {
         return res.status(400).send({ error: "Missing: Name" });
       }
@@ -36,15 +43,17 @@ export class ProjectsRoutes {
       res.status(201).send({});
     });
 
-    interface PutProject extends RequestGenericInterface {
+    fastify.put<{
       Body: {
         id: string;
         name: string;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         info: any;
       };
-    }
-    fastify.put<PutProject>("/", async (req, res) => {
+    }>("/", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
       if (!req.body.id) {
         return res.status(400).send({ error: "Missing: Project ID" });
       }
@@ -57,5 +66,24 @@ export class ProjectsRoutes {
       await ProjectsDataUpdate(OTelRequestSpan(req), project);
       res.status(200).send({});
     });
+
+    fastify.get<{ Params: { projectId: string } }>(
+      "/:projectId/status",
+      async (req, res) => {
+        if (!(await AuthGetUserSession(req)).isAuthenticated) {
+          return res.status(403).send({ error: "Access Denied" });
+        }
+        const status = await ProjectsSyncGetStatusProject(
+          OTelRequestSpan(req),
+          req.params.projectId
+        );
+        if (!status) {
+          return res.status(401).send({ error: "Invalid Request" });
+        }
+        res.status(200).send({
+          status,
+        });
+      }
+    );
   }
 }

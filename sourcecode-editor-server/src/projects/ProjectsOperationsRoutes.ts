@@ -7,8 +7,9 @@ import {
   ProjectsDataList,
   ProjectsDataUpdate,
 } from "./ProjectsData";
-import { GitClone } from "../git/Git";
+import { GitCheckout, GitClone } from "../git/Git";
 import { OTelLogger } from "../OTelContext";
+import { AuthGetUserSession } from "../users/Auth";
 
 const logger = OTelLogger().createModuleLogger("ProjectsOperationsRoutes");
 
@@ -21,6 +22,9 @@ export class ProjectsOperationsRoutes {
         projectId: string;
       };
     }>("/clone", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
         req.params.projectId
@@ -38,44 +42,32 @@ export class ProjectsOperationsRoutes {
         });
     });
 
-    interface PostProject extends RequestGenericInterface {
-      Body: {
-        name: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        info: any;
+    fastify.post<{
+      Params: {
+        projectId: string;
       };
-    }
-    fastify.post<PostProject>("/", async (req, res) => {
-      if (!req.body.name) {
-        return res.status(400).send({ error: "Missing: Name" });
-      }
-      const newProject = new Project();
-      newProject.name = req.body.name;
-      newProject.info = req.body.info || "";
-      await ProjectsDataAdd(OTelRequestSpan(req), newProject);
-      res.status(201).send({});
-    });
-
-    interface PutProject extends RequestGenericInterface {
       Body: {
-        id: string;
-        name: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        info: any;
+        branch: string;
       };
-    }
-    fastify.put<PutProject>("/", async (req, res) => {
-      if (!req.body.id) {
-        return res.status(400).send({ error: "Missing: Project ID" });
+    }>("/checkout", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
       }
-      const project = await ProjectsDataGet(OTelRequestSpan(req), req.body.id);
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
       if (!project) {
-        return res.status(404).send({ error: "Project Not Found" });
+        return res.status(401).send({ error: "Operation Rejected" });
       }
-      project.name = req.body.name || project.name;
-      project.info = req.body.info || project.info;
-      await ProjectsDataUpdate(OTelRequestSpan(req), project);
-      res.status(200).send({});
+      GitCheckout(OTelRequestSpan(req), project, req.body.branch)
+        .then(() => {
+          res.status(201).send({});
+        })
+        .catch((err) => {
+          logger.error("Git Checkout Failed: " + err.message);
+          return res.status(500).send({ error: "Operation Failed" });
+        });
     });
   }
 }

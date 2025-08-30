@@ -18,6 +18,9 @@ import { SSHRoutes } from "./ssh/SSHRoutes";
 import { ProjectsRoutes } from "./projects/ProjectsRoutes";
 import { ProjectsOperationsRoutes } from "./projects/ProjectsOperationsRoutes";
 import { GitInit } from "./git/Git";
+import { ProjectsSyncInit } from "./projects/ProjectsSync";
+import { ProjectsFilesRoutes } from "./projects/ProjectsFilesRoutes";
+import { FilesInit } from "./files/Files";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -42,6 +45,8 @@ Promise.resolve().then(async () => {
   await AuthInit(span, config);
   await GitInit(span, config);
   await SSHInit(span, config);
+  await ProjectsSyncInit(span, config);
+  await FilesInit(span, config);
 
   span.end();
 
@@ -74,7 +79,9 @@ Promise.resolve().then(async () => {
   fastify.register(new ProjectsOperationsRoutes().getRoutes, {
     prefix: "/api/projects/:projectId/operations",
   });
-
+  fastify.register(new ProjectsFilesRoutes().getRoutes, {
+    prefix: "/api/projects/:projectId/files",
+  });
   fastify.register(new SSHRoutes().getRoutes, {
     prefix: "/api/ssh",
   });

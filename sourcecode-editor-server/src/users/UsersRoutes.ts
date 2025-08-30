@@ -1,5 +1,5 @@
 import { OTelRequestSpan } from "@devopsplaybook.io/otel-utils-fastify";
-import { FastifyInstance, RequestGenericInterface } from "fastify";
+import { FastifyInstance } from "fastify";
 import { User } from "../model/User";
 import { AuthGenerateJWT, AuthGetUserSession } from "./Auth";
 import {
@@ -27,13 +27,12 @@ export class UsersRoutes {
       }
     });
 
-    interface PostSession extends RequestGenericInterface {
+    fastify.post<{
       Body: {
         name: string;
         password: string;
       };
-    }
-    fastify.post<PostSession>("/session", async (req, res) => {
+    }>("/session", async (req, res) => {
       let user: User;
       // From token
       const userSession = await AuthGetUserSession(req);
@@ -69,13 +68,12 @@ export class UsersRoutes {
       }
     });
 
-    interface PostUser extends RequestGenericInterface {
+    fastify.post<{
       Body: {
         name: string;
         password: string;
       };
-    }
-    fastify.post<PostUser>("/", async (req, res) => {
+    }>("/", async (req, res) => {
       let isInitialized = true;
       if ((await UsersDataList(OTelRequestSpan(req))).length === 0) {
         isInitialized = false;
@@ -104,13 +102,12 @@ export class UsersRoutes {
       res.status(201).send({});
     });
 
-    interface PutNewPassword extends RequestGenericInterface {
+    fastify.put<{
       Body: {
         password: string;
         passwordOld: string;
       };
-    }
-    fastify.put<PutNewPassword>("/password", async (req, res) => {
+    }>("/password", async (req, res) => {
       const userSession = await AuthGetUserSession(req);
       if (!userSession.isAuthenticated) {
         return res.status(403).send({ error: "Access Denied" });

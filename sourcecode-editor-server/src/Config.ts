@@ -17,7 +17,7 @@ export class Config implements ConfigOTelInterface {
   public DATA_DIR = process.env.DATA_DIR || "/data";
   public JWT_KEY: string = uuidv4();
   public LOG_LEVEL = "info";
-  public STATS_FETCH_FREQUENCY = 60;
+  public PROJECTS_SYNC_FREQUENCY = 3_600_000;
   public STATS_RETENTION = 60 * 60 * 24;
   public OPENTELEMETRY_COLLECTOR_HTTP_TRACES = "";
   public OPENTELEMETRY_COLLECTOR_HTTP_METRICS = "";
@@ -69,7 +69,7 @@ export class Config implements ConfigOTelInterface {
     setIfSet("DATA_DIR");
     setIfSet("JWT_KEY", false);
     setIfSet("LOG_LEVEL");
-    setIfSet("STATS_FETCH_FREQUENCY");
+    setIfSet("PROJECTS_SYNC_FREQUENCY");
     setIfSet("STATS_RETENTION");
     setIfSet("OPENTELEMETRY_COLLECTOR_HTTP_TRACES");
     setIfSet("OPENTELEMETRY_COLLECTOR_HTTP_METRICS");

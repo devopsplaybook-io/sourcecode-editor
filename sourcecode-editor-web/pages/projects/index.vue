@@ -6,19 +6,25 @@
     </div>
     <div v-for="project in projects" :key="project.id" class="project-card">
       <div class="project-name">{{ project.name }}</div>
-      <div class="project-controls">
-        <select v-model="selectedBranches[project.id]" class="branch-select">
+      <div v-if="project.status" class="project-controls">
+        <select
+          class="branch-select"
+          :value="project.status.currentBranch"
+          @change="onBranchSelect(project, $event)"
+        >
           <option
-            v-for="branch in getBranches(project)"
+            v-for="branch in project.status.branches"
             :key="branch"
             :value="branch"
           >
             {{ branch }}
           </option>
         </select>
-        <button @click="cloneProject(project)">Clone</button>
         <button @click="pullProject(project)">Pull</button>
         <button @click="commitProject(project)">Commit</button>
+      </div>
+      <div v-else class="project-controls">
+        <button @click="cloneProject(project)">Clone</button>
       </div>
     </div>
   </div>
@@ -34,6 +40,7 @@ export default {
   data() {
     return {
       projects: [],
+      projectsStatuses: [],
       selectedBranches: {},
     };
   },
@@ -52,15 +59,19 @@ export default {
         )
         .then(async (res) => {
           this.projects = res.data.projects;
-          // Initialize selectedBranches with default branch for each project
-          this.projects.forEach((project) => {
-            this.$set(
-              this.selectedBranches,
-              project.id,
-              this.getBranches(project)[0]
-            );
+          this.projects.forEach(async (project) => {
+            axios
+              .get(
+                `${(await Config.get()).SERVER_URL}/projects/${
+                  project.projectId
+                }/status`,
+                await AuthService.getAuthHeader()
+              )
+              .then(async (res) => {
+                project.status = res.data.status;
+              })
+              .catch(handleError);
           });
-          console.log(res.data);
         })
         .catch(handleError);
     },
@@ -99,6 +110,24 @@ export default {
     },
     refresh() {
       this.fetchProjects();
+    },
+    async onBranchSelect(project, event) {
+      const branch = event.target.value;
+      await axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            project.projectId
+          }/operations/checkout`,
+          { branch },
+          await AuthService.getAuthHeader()
+        )
+        .then(async (res) => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Checkout Branch: " + branch,
+          });
+        })
+        .catch(handleError);
     },
   },
 };

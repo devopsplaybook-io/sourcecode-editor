@@ -12,7 +12,7 @@ let config: Config;
 let projectParentFolder = "";
 
 export async function GitInit(context: Span, configIn: Config): Promise<void> {
-  const span = OTelTracer().startSpan("GitClone", context);
+  const span = OTelTracer().startSpan("GitInit", context);
   config = configIn;
   projectParentFolder = path.join(config.DATA_DIR, "/projects/");
   ensureDir(projectParentFolder);
@@ -35,5 +35,69 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
     throw err;
   } finally {
     span.end();
+  }
+}
+
+export async function GitCheckout(
+  context: Span,
+  project: Project,
+  branch: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("GitCheckout", context);
+  try {
+    logger.info(
+      `Checkout project branch: ${project.projectId} ${project.name} ${branch}`
+    );
+    await SystemCommandExecute(
+      span,
+      `cd ${projectParentFolder}/${
+        project.projectId
+      } && GIT_SSH_COMMAND='ssh -i ${await SSHGetPrivateKeyPath(
+        span
+      )}' git checkout ${branch}`
+    );
+  } catch (err) {
+    logger.error(`Failed to clone project: ${err.message}`);
+    throw err;
+  } finally {
+    span.end();
+  }
+}
+
+export async function GitListBranches(
+  context: Span,
+  project: Project
+): Promise<{ branches: string[]; current: string }> {
+  const span = OTelTracer().startSpan("GitListBranches", context);
+  try {
+    const gitCommandOutput = await SystemCommandExecute(
+      span,
+      `cd ${projectParentFolder}/${
+        project.projectId
+      } && GIT_SSH_COMMAND='ssh -i ${await SSHGetPrivateKeyPath(
+        span
+      )}' git branch -r`
+    );
+    const branches = gitCommandOutput
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .filter((line) => !line.includes("->"))
+      .map((line) => {
+        const trimmed = line.trim();
+        return trimmed.startsWith("origin/") ? trimmed.slice(7) : trimmed;
+      });
+    const current =
+      gitCommandOutput
+        .split("\n")
+        .find((branch) => branch.includes("->"))
+        ?.split("->")[1]
+        .trim()
+        .replace(/^origin\//, "") || "";
+    span.end();
+    return { branches, current };
+  } catch (err) {
+    logger.error(`Failed to get branches: ${err.message}`);
+    span.end();
+    throw err;
   }
 }
