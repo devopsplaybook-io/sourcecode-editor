@@ -46,7 +46,7 @@ export async function SSHGetPublicKey(context: Span): Promise<string> {
 export async function SSHGetPrivateKeyPath(context: Span): Promise<string> {
   const span = OTelTracer().startSpan("SSHGetPrivateKeyPath", context);
   try {
-    const privateKeyPath = path.join(sshConfigFolder, "id_rsa");
+    const privateKeyPath = path.resolve(path.join(sshConfigFolder, "id_rsa"));
     await fs.access(privateKeyPath);
     span.end();
     return privateKeyPath;

@@ -26,7 +26,7 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
     await remove(path.join(projectParentFolder, project.projectId));
     await SystemCommandExecute(
       span,
-      `GIT_SSH_COMMAND='ssh -i ${await SSHGetPrivateKeyPath(span)}' git clone ${
+      `${await GitEnv(span)} && git clone ${
         project.info.url
       } ${projectParentFolder}/${project.projectId}`
     );
@@ -50,11 +50,9 @@ export async function GitCheckout(
     );
     await SystemCommandExecute(
       span,
-      `cd ${projectParentFolder}/${
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
-      } && GIT_SSH_COMMAND='ssh -i ${await SSHGetPrivateKeyPath(
-        span
-      )}' git checkout ${branch}`
+      } && git checkout ${branch}`
     );
   } catch (err) {
     logger.error(`Failed to clone project: ${err.message}`);
@@ -72,11 +70,9 @@ export async function GitListBranches(
   try {
     const gitCommandOutput = await SystemCommandExecute(
       span,
-      `cd ${projectParentFolder}/${
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
-      } && GIT_SSH_COMMAND='ssh -i ${await SSHGetPrivateKeyPath(
-        span
-      )}' git branch -r`
+      } && git branch -r`
     );
     const branches = gitCommandOutput
       .split("\n")
@@ -100,4 +96,13 @@ export async function GitListBranches(
     span.end();
     throw err;
   }
+}
+
+// Private Function
+
+async function GitEnv(context: Span): Promise<string> {
+  const span = OTelTracer().startSpan("GitEnv", context);
+  const privateKeyPath = await SSHGetPrivateKeyPath(span);
+  span.end();
+  return `export GIT_SSH_COMMAND='ssh -i ${privateKeyPath}'`;
 }
