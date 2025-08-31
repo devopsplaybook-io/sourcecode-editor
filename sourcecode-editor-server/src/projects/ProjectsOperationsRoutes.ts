@@ -7,7 +7,7 @@ import {
   ProjectsDataList,
   ProjectsDataUpdate,
 } from "./ProjectsData";
-import { GitCheckout, GitClone } from "../git/Git";
+import { GitCheckout, GitClone, GitPull } from "../git/Git";
 import { OTelLogger } from "../OTelContext";
 import { AuthGetUserSession } from "../users/Auth";
 
@@ -66,6 +66,31 @@ export class ProjectsOperationsRoutes {
         })
         .catch((err) => {
           logger.error("Git Checkout Failed: " + err.message);
+          return res.status(500).send({ error: "Operation Failed" });
+        });
+    });
+
+    fastify.post<{
+      Params: {
+        projectId: string;
+      };
+    }>("/pull", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      GitPull(OTelRequestSpan(req), project)
+        .then(() => {
+          res.status(201).send({});
+        })
+        .catch((err) => {
+          logger.error("Git Pull Failed: " + err.message);
           return res.status(500).send({ error: "Operation Failed" });
         });
     });

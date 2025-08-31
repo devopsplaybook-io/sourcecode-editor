@@ -95,6 +95,18 @@ Promise.resolve().then(async () => {
     prefix: "/",
   });
 
+  fastify.setNotFoundHandler((request, reply) => {
+    if (
+      request.raw.url &&
+      !request.raw.url.startsWith("/api/") &&
+      !path.extname(request.raw.url)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (reply as any).sendFile("index.html");
+    }
+    reply.status(404).send({ error: "Not Found" });
+  });
+
   fastify.listen({ port: config.API_PORT, host: "0.0.0.0" }, (err) => {
     if (err) {
       logger.error(err);

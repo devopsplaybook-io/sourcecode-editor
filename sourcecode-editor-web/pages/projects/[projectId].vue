@@ -5,8 +5,6 @@
     <input v-model="project.name" type="text" />
     <label>URL</label>
     <input v-model="project.info.url" type="text" />
-    <label>Username</label>
-    <input v-model="project.info.username" type="text" />
     <button v-if="!loading" v-on:click="updateProject()">Update</button>
     <Loading v-if="loading" />
   </div>
@@ -43,11 +41,7 @@ export default {
   },
   methods: {
     async updateProject() {
-      if (
-        this.project.name ||
-        this.project.info.url ||
-        this.project.info.username
-      ) {
+      if (this.project.name || this.project.info.url) {
         this.loading = true;
         axios
           .put(

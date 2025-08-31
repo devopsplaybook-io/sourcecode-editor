@@ -5,8 +5,6 @@
     <input v-model="project.name" type="text" />
     <label>URL</label>
     <input v-model="project.info.url" type="text" />
-    <label>Username</label>
-    <input v-model="project.info.username" type="text" />
     <button v-if="!loading" v-on:click="saveNew()">Add</button>
     <Loading v-if="loading" />
   </div>

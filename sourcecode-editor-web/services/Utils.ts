@@ -1,5 +1,7 @@
 export function UtilsRelativeTime(date: string) {
-  const delta = Math.round((new Date().getTime() - new Date(date).getTime()) / 1000);
+  const delta = Math.round(
+    (new Date().getTime() - new Date(date).getTime()) / 1000
+  );
   const minute = 60,
     hour = minute * 60,
     day = hour * 24,
@@ -46,7 +48,27 @@ export async function UtilsDecompressData(compressedData: string) {
       controller.close();
     },
   });
-  const response = new Response(readableStream.pipeThrough(decompressionStream));
+  const response = new Response(
+    readableStream.pipeThrough(decompressionStream)
+  );
   const arrayBuffer = await response.arrayBuffer();
   return new TextDecoder().decode(arrayBuffer);
+}
+
+export async function UtilsCompressData(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const uint8array = encoder.encode(data);
+  const compressionStream = new CompressionStream("gzip");
+  const writable = compressionStream.writable.getWriter();
+  writable.write(uint8array);
+  writable.close();
+  const compressedStream = compressionStream.readable;
+  const response = new Response(compressedStream);
+  const arrayBuffer = await response.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(arrayBuffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i] ?? 0);
+  }
+  return btoa(binary);
 }

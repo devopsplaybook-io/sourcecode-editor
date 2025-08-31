@@ -62,6 +62,24 @@ export async function GitCheckout(
   }
 }
 
+export async function GitPull(context: Span, project: Project): Promise<void> {
+  const span = OTelTracer().startSpan("GitPull", context);
+  try {
+    logger.info(`Pulling: ${project.projectId} ${project.name}`);
+    await SystemCommandExecute(
+      span,
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git pull`
+    );
+  } catch (err) {
+    logger.error(`Failed to pull: ${err.message}`);
+    throw err;
+  } finally {
+    span.end();
+  }
+}
+
 export async function GitListBranches(
   context: Span,
   project: Project

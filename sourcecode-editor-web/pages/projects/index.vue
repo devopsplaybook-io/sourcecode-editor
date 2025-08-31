@@ -4,8 +4,8 @@
       <i class="bi bi-arrow-clockwise" v-on:click="refresh()"></i>
       <NuxtLink to="/projects/new"><i class="bi bi-plus-square"></i></NuxtLink>
     </div>
-    <div v-for="project in projects" :key="project.id" class="project-card">
-      <div class="project-name">{{ project.name }}</div>
+    <article v-for="project in projects" :key="project.id" class="project-card">
+      <header>{{ project.name }}</header>
       <div v-if="project.status" class="project-controls">
         <select
           class="branch-select"
@@ -20,19 +20,18 @@
             {{ branch }}
           </option>
         </select>
+      </div>
+      <div class="project-controls">
+        <NuxtLink :to="'/projects/' + project.projectId"
+          ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
+        >
         <button @click="pullProject(project)">Pull</button>
         <button @click="commitProject(project)">Commit</button>
-        <NuxtLink :to="'/projects/' + project.projectId"
-          ><i class="bi bi-pencil-square"></i
-        ></NuxtLink>
+        <button v-if="!project.status" @click="cloneProject(project)">
+          Clone
+        </button>
       </div>
-      <div v-else class="project-controls">
-        <NuxtLink :to="'/projects/' + project.projectId"
-          ><i class="bi bi-pencil-square"></i
-        ></NuxtLink>
-        <button @click="cloneProject(project)">Clone</button>
-      </div>
-    </div>
+    </article>
   </div>
 </template>
 
@@ -81,12 +80,8 @@ export default {
         })
         .catch(handleError);
     },
-    getBranches(project) {
-      // Placeholder: Replace with actual branch list per project if available
-      return project.branches || ["main", "dev", "feature"];
-    },
     async cloneProject(project) {
-      await axios
+      axios
         .post(
           `${(await Config.get()).SERVER_URL}/projects/${
             project.projectId
@@ -102,11 +97,22 @@ export default {
         })
         .catch(handleError);
     },
-    pullProject(project) {
-      // Placeholder for pull logic
-      alert(
-        `Pull ${project.name} on branch ${this.selectedBranches[project.id]}`
-      );
+    async pullProject(project) {
+      axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            project.projectId
+          }/operations/pull`,
+          {},
+          await AuthService.getAuthHeader()
+        )
+        .then(async (res) => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Pulled",
+          });
+        })
+        .catch(handleError);
     },
     commitProject(project) {
       // Placeholder for commit logic
@@ -178,23 +184,7 @@ export default {
   font-size: 0.9em;
 }
 
-/* Add some basic styling for project cards and controls */
-.project-card {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  margin: 1em 0;
-  padding: 1em;
-}
-.project-name {
-  font-weight: bold;
-  margin-bottom: 0.5em;
-}
-.project-controls {
-  display: flex;
-  gap: 0.5em;
-  align-items: center;
-}
-.branch-select {
-  min-width: 100px;
+.project-controls button {
+  margin-right: 0.5rem;
 }
 </style>
