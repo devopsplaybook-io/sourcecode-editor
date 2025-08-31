@@ -8,8 +8,13 @@ import {
   ProjectsDataUpdate,
 } from "./ProjectsData";
 import { AuthGetUserSession } from "../users/Auth";
-import { ProjectsSyncGetStatusProject } from "./ProjectsSync";
+import {
+  ProjectsSyncGetStatusProject,
+  ProjectsSyncStartProject,
+} from "./ProjectsSync";
+import { OTelLogger } from "../OTelContext";
 
+const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
 export class ProjectsRoutes {
   //
   public async getRoutes(fastify: FastifyInstance): Promise<void> {
@@ -36,34 +41,41 @@ export class ProjectsRoutes {
       if (!req.body.name) {
         return res.status(400).send({ error: "Missing: Name" });
       }
-      const newProject = new Project();
-      newProject.name = req.body.name;
-      newProject.info = req.body.info || "";
-      await ProjectsDataAdd(OTelRequestSpan(req), newProject);
+      const project = new Project();
+      project.name = req.body.name;
+      project.info = req.body.info || "";
+      await ProjectsDataAdd(OTelRequestSpan(req), project);
+      ProjectsSyncStartProject(null, project).catch((err) => {
+        logger.error(`Error Triggering Project Sync: ${err.message}`);
+      });
+
       res.status(201).send({});
     });
 
     fastify.put<{
+      Params: { projectId: string };
       Body: {
-        id: string;
         name: string;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         info: any;
       };
-    }>("/", async (req, res) => {
+    }>("/:projectId", async (req, res) => {
       if (!(await AuthGetUserSession(req)).isAuthenticated) {
         return res.status(403).send({ error: "Access Denied" });
       }
-      if (!req.body.id) {
-        return res.status(400).send({ error: "Missing: Project ID" });
-      }
-      const project = await ProjectsDataGet(OTelRequestSpan(req), req.body.id);
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
       }
       project.name = req.body.name || project.name;
       project.info = req.body.info || project.info;
       await ProjectsDataUpdate(OTelRequestSpan(req), project);
+      ProjectsSyncStartProject(null, project).catch((err) => {
+        logger.error(`Error Triggering Project Sync: ${err.message}`);
+      });
       res.status(200).send({});
     });
 
@@ -83,6 +95,23 @@ export class ProjectsRoutes {
         res.status(200).send({
           status,
         });
+      }
+    );
+
+    fastify.get<{ Params: { projectId: string } }>(
+      "/:projectId",
+      async (req, res) => {
+        if (!(await AuthGetUserSession(req)).isAuthenticated) {
+          return res.status(403).send({ error: "Access Denied" });
+        }
+        const project = await ProjectsDataGet(
+          OTelRequestSpan(req),
+          req.params.projectId
+        );
+        if (!project) {
+          return res.status(404).send({ error: "Project Not Found" });
+        }
+        res.status(200).send(project);
       }
     );
   }

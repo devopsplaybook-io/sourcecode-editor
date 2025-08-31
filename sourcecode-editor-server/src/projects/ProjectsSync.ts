@@ -42,28 +42,37 @@ export async function ProjectsSyncStart(context: Span): Promise<void> {
   }
 
   for (const project of projects) {
-    logger.info(`Starting sync for project: ${project.projectId}`);
-    try {
-      const projectStatus = new ProjectStatus({ projectId: project.projectId });
-      const { branches, current } = await GitListBranches(span, project);
-      projectStatus.branches = branches;
-      projectStatus.currentBranch = current;
-      const idx = projectStatuses.findIndex(
-        (ps) => ps.projectId === projectStatus.projectId
-      );
-      if (idx !== -1) {
-        projectStatuses[idx] = projectStatus;
-      } else {
-        projectStatuses.push(projectStatus);
-      }
-    } catch (err) {
-      logger.info(
-        `Project sync failed for project: ${project.projectId}: ${err.message}`
-      );
-      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-    }
+    await ProjectsSyncStartProject(span, project);
   }
 
+  span.end();
+}
+
+export async function ProjectsSyncStartProject(
+  context: Span,
+  project: Project
+): Promise<void> {
+  const span = OTelTracer().startSpan("ProjectsSyncStartProject", context);
+  logger.info(`Starting sync for project: ${project.projectId}`);
+  try {
+    const projectStatus = new ProjectStatus({ projectId: project.projectId });
+    const { branches, current } = await GitListBranches(span, project);
+    projectStatus.branches = branches;
+    projectStatus.currentBranch = current;
+    const idx = projectStatuses.findIndex(
+      (ps) => ps.projectId === projectStatus.projectId
+    );
+    if (idx !== -1) {
+      projectStatuses[idx] = projectStatus;
+    } else {
+      projectStatuses.push(projectStatus);
+    }
+  } catch (err) {
+    logger.info(
+      `Project sync failed for project: ${project.projectId}: ${err.message}`
+    );
+    span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+  }
   span.end();
 }
 

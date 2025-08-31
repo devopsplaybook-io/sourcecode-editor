@@ -22,8 +22,14 @@
         </select>
         <button @click="pullProject(project)">Pull</button>
         <button @click="commitProject(project)">Commit</button>
+        <NuxtLink :to="'/projects/' + project.projectId"
+          ><i class="bi bi-pencil-square"></i
+        ></NuxtLink>
       </div>
       <div v-else class="project-controls">
+        <NuxtLink :to="'/projects/' + project.projectId"
+          ><i class="bi bi-pencil-square"></i
+        ></NuxtLink>
         <button @click="cloneProject(project)">Clone</button>
       </div>
     </div>
