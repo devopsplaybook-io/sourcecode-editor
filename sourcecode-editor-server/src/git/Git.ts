@@ -83,7 +83,7 @@ export async function GitPull(context: Span, project: Project): Promise<void> {
 export async function GitListBranches(
   context: Span,
   project: Project
-): Promise<{ branches: string[]; current: string }> {
+): Promise<string[]> {
   const span = OTelTracer().startSpan("GitListBranches", context);
   try {
     const gitCommandOutput = await SystemCommandExecute(
@@ -100,17 +100,36 @@ export async function GitListBranches(
         const trimmed = line.trim();
         return trimmed.startsWith("origin/") ? trimmed.slice(7) : trimmed;
       });
-    const current =
-      gitCommandOutput
-        .split("\n")
-        .find((branch) => branch.includes("->"))
-        ?.split("->")[1]
-        .trim()
-        .replace(/^origin\//, "") || "";
     span.end();
-    return { branches, current };
+    return branches;
   } catch (err) {
     logger.error(`Failed to get branches: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
+
+export async function GitGetBranchCurrent(
+  context: Span,
+  project: Project
+): Promise<string> {
+  const span = OTelTracer().startSpan("GitGetBranchCurrent", context);
+  try {
+    const gitCommandOutput = await SystemCommandExecute(
+      span,
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git branch`
+    );
+    const current = gitCommandOutput
+      .split("\n")
+      .find((branch) => branch.includes("*"))
+      ?.split("*")[1]
+      .trim();
+    span.end();
+    return current;
+  } catch (err) {
+    logger.error(`Failed to get branche: ${err.message}`);
     span.end();
     throw err;
   }

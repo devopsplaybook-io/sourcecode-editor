@@ -9,7 +9,7 @@ import { ProjectsDataList } from "./ProjectsData";
 import { Config } from "../Config";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { get } from "lodash";
-import { GitListBranches } from "../git/Git";
+import { GitGetBranchCurrent, GitListBranches } from "../git/Git";
 import { ProjectStatus } from "../model/ProjectStatus";
 
 const logger = OTelLogger().createModuleLogger("ProjectsSync");
@@ -53,12 +53,13 @@ export async function ProjectsSyncStartProject(
   project: Project
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncStartProject", context);
-  logger.info(`Starting sync for project: ${project.projectId}`);
+  logger.info(
+    `Starting sync for project: ${project.projectId} ${project.name}`
+  );
   try {
     const projectStatus = new ProjectStatus({ projectId: project.projectId });
-    const { branches, current } = await GitListBranches(span, project);
-    projectStatus.branches = branches;
-    projectStatus.currentBranch = current;
+    projectStatus.branches = await GitListBranches(span, project);
+    projectStatus.currentBranch = await GitGetBranchCurrent(span, project);
     const idx = projectStatuses.findIndex(
       (ps) => ps.projectId === projectStatus.projectId
     );
