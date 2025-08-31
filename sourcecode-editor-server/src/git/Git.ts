@@ -104,5 +104,5 @@ async function GitEnv(context: Span): Promise<string> {
   const span = OTelTracer().startSpan("GitEnv", context);
   const privateKeyPath = await SSHGetPrivateKeyPath(span);
   span.end();
-  return `export GIT_SSH_COMMAND='ssh -i ${privateKeyPath}'`;
+  return `export GIT_SSH_COMMAND='ssh -i ${privateKeyPath} -o StrictHostKeyChecking=no'`;
 }
