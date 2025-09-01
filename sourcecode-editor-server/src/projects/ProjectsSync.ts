@@ -1,16 +1,15 @@
+import { SpanStatusCode } from "@opentelemetry/api";
 import { Span } from "@opentelemetry/sdk-trace-base";
-import { Project } from "../model/Project";
+import { Config } from "../Config";
 import {
-  SqlDbUtilsExecSQL,
-  SqlDbUtilsQuerySQL,
-} from "../utils-std-ts/SqlDbUtils";
+  GitGetBranchCurrent,
+  GitListBranches,
+  GitListModifiedFiles,
+} from "../git/Git";
+import { Project } from "../model/Project";
+import { ProjectStatus } from "../model/ProjectStatus";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import { ProjectsDataList } from "./ProjectsData";
-import { Config } from "../Config";
-import { SpanStatusCode } from "@opentelemetry/api";
-import { get } from "lodash";
-import { GitGetBranchCurrent, GitListBranches } from "../git/Git";
-import { ProjectStatus } from "../model/ProjectStatus";
 
 const logger = OTelLogger().createModuleLogger("ProjectsSync");
 let config: Config;
@@ -58,7 +57,9 @@ export async function ProjectsSyncStartProject(
   );
   try {
     const projectStatus = new ProjectStatus({ projectId: project.projectId });
+
     projectStatus.branches = await GitListBranches(span, project);
+
     projectStatus.currentBranch = await GitGetBranchCurrent(span, project);
     const idx = projectStatuses.findIndex(
       (ps) => ps.projectId === projectStatus.projectId
@@ -68,6 +69,8 @@ export async function ProjectsSyncStartProject(
     } else {
       projectStatuses.push(projectStatus);
     }
+
+    projectStatus.filesUpdateStatus = await GitListModifiedFiles(span, project);
   } catch (err) {
     logger.info(
       `Project sync failed for project: ${project.projectId}: ${err.message}`

@@ -26,12 +26,17 @@
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
         <button @click="pullProject(project)">Pull</button>
-        <button @click="commitProject(project)">Commit</button>
+        <button @click="commitPushProject(project)">Commit/Push</button>
         <button v-if="!project.status" @click="cloneProject(project)">
           Clone
         </button>
       </div>
     </article>
+    <DialogCommitPush
+      v-if="showCommitPushDialog"
+      :project="selectedProject"
+      @onClose="onCloseDialog()"
+    />
   </div>
 </template>
 
@@ -47,6 +52,8 @@ export default {
       projects: [],
       projectsStatuses: [],
       selectedBranches: {},
+      showCommitPushDialog: false,
+      selectedProject: null,
     };
   },
   async created() {
@@ -114,11 +121,13 @@ export default {
         })
         .catch(handleError);
     },
-    commitProject(project) {
-      // Placeholder for commit logic
-      alert(
-        `Commit on ${project.name} branch ${this.selectedBranches[project.id]}`
-      );
+    commitPushProject(project) {
+      this.selectedProject = project;
+      this.showCommitPushDialog = true;
+    },
+    onCloseDialog() {
+      this.selectedProject = null;
+      this.showCommitPushDialog = false;
     },
     refresh() {
       this.fetchProjects();
