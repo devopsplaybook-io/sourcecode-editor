@@ -62,9 +62,7 @@ export default {
       selectedFiles: [],
     };
   },
-  async created() {
-    console.log(this.project);
-  },
+  async created() {},
   methods: {
     async clickClose(namespace, podname) {
       this.$emit("onClose", {});
