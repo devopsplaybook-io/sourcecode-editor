@@ -40,6 +40,7 @@
           <button @click="selectAll()">Select All</button>
           <button @click="commit()">Commit</button>
           <button @click="push()">Push</button>
+          <button @click="reset()">Reset</button>
         </div>
       </article>
     </dialog>
@@ -100,6 +101,23 @@ export default {
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Pushed",
+          });
+        })
+        .catch(handleError);
+    },
+    async reset() {
+      axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.project.projectId
+          }/operations/reset`,
+          {},
+          await AuthService.getAuthHeader()
+        )
+        .then(async (res) => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Reset",
           });
         })
         .catch(handleError);

@@ -225,6 +225,24 @@ export async function GitPush(context: Span, project: Project): Promise<void> {
   }
 }
 
+export async function GitReset(context: Span, project: Project): Promise<void> {
+  const span = OTelTracer().startSpan("GitReset", context);
+  try {
+    logger.info(`Resetting project: ${project.projectId} ${project.name}`);
+    await SystemCommandExecute(
+      span,
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git reset --hard`
+    );
+    span.end();
+  } catch (err) {
+    logger.error(`Failed to reset: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
+
 // Private Function
 
 async function GitEnv(context: Span): Promise<string> {

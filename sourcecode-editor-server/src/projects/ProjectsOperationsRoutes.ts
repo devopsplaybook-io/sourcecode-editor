@@ -7,9 +7,17 @@ import {
   ProjectsDataList,
   ProjectsDataUpdate,
 } from "./ProjectsData";
-import { GitCheckout, GitClone, GitCommit, GitPull, GitPush } from "../git/Git";
+import {
+  GitCheckout,
+  GitClone,
+  GitCommit,
+  GitPull,
+  GitPush,
+  GitReset,
+} from "../git/Git";
 import { OTelLogger } from "../OTelContext";
 import { AuthGetUserSession } from "../users/Auth";
+import { ProjectsSyncGetStatusProject } from "./ProjectsSync";
 
 const logger = OTelLogger().createModuleLogger("ProjectsOperationsRoutes");
 
@@ -34,6 +42,9 @@ export class ProjectsOperationsRoutes {
       }
       GitClone(OTelRequestSpan(req), project)
         .then(() => {
+          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          });
           res.status(201).send({});
         })
         .catch((err) => {
@@ -62,6 +73,10 @@ export class ProjectsOperationsRoutes {
       }
       GitCheckout(OTelRequestSpan(req), project, req.body.branch)
         .then(() => {
+          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          });
+
           res.status(201).send({});
         })
         .catch((err) => {
@@ -87,10 +102,41 @@ export class ProjectsOperationsRoutes {
       }
       GitPull(OTelRequestSpan(req), project)
         .then(() => {
+          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          });
           res.status(201).send({});
         })
         .catch((err) => {
           logger.error("Git Pull Failed: " + err.message);
+          return res.status(500).send({ error: "Operation Failed" });
+        });
+    });
+
+    fastify.post<{
+      Params: {
+        projectId: string;
+      };
+    }>("/reset", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      GitReset(OTelRequestSpan(req), project)
+        .then(() => {
+          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          });
+          res.status(201).send({});
+        })
+        .catch((err) => {
+          logger.error("Git Reset Failed: " + err.message);
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -109,6 +155,9 @@ export class ProjectsOperationsRoutes {
         req.params.projectId
       );
       if (!project) {
+        ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+          logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+        });
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitCommit(OTelRequestSpan(req), project, req.body.files, req.body.message)
@@ -138,6 +187,9 @@ export class ProjectsOperationsRoutes {
       }
       GitPush(OTelRequestSpan(req), project)
         .then(() => {
+          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
+            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          });
           res.status(201).send({});
         })
         .catch((err) => {
