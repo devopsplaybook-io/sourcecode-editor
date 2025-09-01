@@ -243,6 +243,67 @@ export async function GitReset(context: Span, project: Project): Promise<void> {
   }
 }
 
+export async function GitCreateBranch(
+  context: Span,
+  project: Project,
+  branch: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("GitCreateBranch", context);
+  try {
+    logger.info(
+      `Creating branch: ${branch} in project: ${project.projectId} ${project.name}`
+    );
+    await SystemCommandExecute(
+      span,
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git checkout -b ${branch} &&  git push --set-upstream origin ${branch} `
+    );
+    span.end();
+  } catch (err) {
+    logger.error(`Failed to create branch: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
+
+export async function GitDeleteBranch(
+  context: Span,
+  project: Project,
+  branch: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("GitDeleteBranch", context);
+  try {
+    logger.info(
+      `Deleting branch: ${branch} in project: ${project.projectId} ${project.name}`
+    );
+    // Determine default branch (main or master)
+    const gitEnv = await GitEnv(span);
+    const projectPath = `${projectParentFolder}/${project.projectId}`;
+    const branchList = await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git branch -a`
+    );
+    let defaultBranch = "main";
+    if (!branchList.split("\n").some((b) => b.includes("main"))) {
+      defaultBranch = "master";
+    }
+    await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git checkout ${defaultBranch}`
+    );
+    await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git branch -D ${branch} && git push origin --delete ${branch}`
+    );
+    span.end();
+  } catch (err) {
+    logger.error(`Failed to delete branch: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
+
 // Private Function
 
 async function GitEnv(context: Span): Promise<string> {

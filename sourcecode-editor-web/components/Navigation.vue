@@ -68,6 +68,7 @@ export default {
           });
       }, 10000);
     }
+    GitProjectsStore().fetch();
     PreferencesService.applyTheme();
   },
   methods: {

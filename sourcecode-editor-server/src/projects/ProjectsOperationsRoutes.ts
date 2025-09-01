@@ -14,10 +14,12 @@ import {
   GitPull,
   GitPush,
   GitReset,
+  GitCreateBranch,
+  GitDeleteBranch,
 } from "../git/Git";
 import { OTelLogger } from "../OTelContext";
 import { AuthGetUserSession } from "../users/Auth";
-import { ProjectsSyncGetStatusProject } from "./ProjectsSync";
+import { ProjectsSyncStartProject } from "./ProjectsSync";
 
 const logger = OTelLogger().createModuleLogger("ProjectsOperationsRoutes");
 
@@ -42,8 +44,8 @@ export class ProjectsOperationsRoutes {
       }
       GitClone(OTelRequestSpan(req), project)
         .then(() => {
-          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
           });
           res.status(201).send({});
         })
@@ -73,8 +75,8 @@ export class ProjectsOperationsRoutes {
       }
       GitCheckout(OTelRequestSpan(req), project, req.body.branch)
         .then(() => {
-          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
           });
 
           res.status(201).send({});
@@ -102,8 +104,8 @@ export class ProjectsOperationsRoutes {
       }
       GitPull(OTelRequestSpan(req), project)
         .then(() => {
-          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
           });
           res.status(201).send({});
         })
@@ -130,8 +132,9 @@ export class ProjectsOperationsRoutes {
       }
       GitReset(OTelRequestSpan(req), project)
         .then(() => {
-          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          console.log("Reset done");
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
           });
           res.status(201).send({});
         })
@@ -155,8 +158,8 @@ export class ProjectsOperationsRoutes {
         req.params.projectId
       );
       if (!project) {
-        ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-          logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+        ProjectsSyncStartProject(null, project).catch((err) => {
+          logger.error("ProjectsSyncStartProject Failed: " + err.message);
         });
         return res.status(401).send({ error: "Operation Rejected" });
       }
@@ -187,13 +190,67 @@ export class ProjectsOperationsRoutes {
       }
       GitPush(OTelRequestSpan(req), project)
         .then(() => {
-          ProjectsSyncGetStatusProject(null, project.projectId).catch((err) => {
-            logger.error("ProjectsSyncGetStatusProject Failed: " + err.message);
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
           });
           res.status(201).send({});
         })
         .catch((err) => {
           logger.error("Git Pull Failed: " + err.message);
+          return res.status(500).send({ error: "Operation Failed" });
+        });
+    });
+
+    fastify.post<{
+      Params: { projectId: string };
+      Body: { branch: string };
+    }>("/branch/create", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      GitCreateBranch(OTelRequestSpan(req), project, req.body.branch)
+        .then(() => {
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
+          });
+          res.status(201).send({});
+        })
+        .catch((err) => {
+          logger.error("Git Create Branch Failed: " + err.message);
+          return res.status(500).send({ error: "Operation Failed" });
+        });
+    });
+
+    fastify.post<{
+      Params: { projectId: string };
+      Body: { branch: string; remote?: boolean };
+    }>("/branch/delete", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      GitDeleteBranch(OTelRequestSpan(req), project, req.body.branch)
+        .then(() => {
+          ProjectsSyncStartProject(null, project).catch((err) => {
+            logger.error("ProjectsSyncStartProject Failed: " + err.message);
+          });
+          res.status(201).send({});
+        })
+        .catch((err) => {
+          logger.error("Git Delete Branch Failed: " + err.message);
           return res.status(500).send({ error: "Operation Failed" });
         });
     });

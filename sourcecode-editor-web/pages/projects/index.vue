@@ -6,7 +6,7 @@
     </div>
     <article v-for="project in projects" :key="project.id" class="project-card">
       <header>{{ project.name }}</header>
-      <div v-if="project.status" class="project-controls">
+      <div v-if="project.status" class="action-controls">
         <select
           class="branch-select"
           :value="project.status.currentBranch"
@@ -21,7 +21,7 @@
           </option>
         </select>
       </div>
-      <div class="project-controls">
+      <div class="action-controls">
         <NuxtLink :to="'/projects/' + project.projectId"
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
@@ -30,6 +30,9 @@
         <button v-if="!project.status" @click="cloneProject(project)">
           Clone
         </button>
+        <!-- New buttons for branch creation and deletion -->
+        <button @click="openCreateBranchDialog(project)">Create Branch</button>
+        <button @click="deleteBranch(project)">Delete Branch</button>
       </div>
     </article>
     <DialogCommitPush
@@ -37,8 +40,19 @@
       :project="selectedProject"
       @onClose="onCloseDialog()"
     />
+    <!-- Dialog for branch creation -->
+    <DialogCreateBranch
+      v-if="showCreateBranchDialog"
+      :project="selectedProject"
+      @onClose="onCloseCreateBranchDialog"
+      @onCreate="onCreateBranch"
+    />
   </div>
 </template>
+
+<script setup>
+const authenticationStore = AuthenticationStore();
+</script>
 
 <script>
 import axios from "axios";
@@ -54,6 +68,7 @@ export default {
       selectedBranches: {},
       showCommitPushDialog: false,
       selectedProject: null,
+      showCreateBranchDialog: false,
     };
   },
   async created() {
@@ -150,6 +165,69 @@ export default {
         })
         .catch(handleError);
     },
+    openCreateBranchDialog(project) {
+      this.selectedProject = project;
+      this.showCreateBranchDialog = true;
+    },
+    onCloseCreateBranchDialog() {
+      this.selectedProject = null;
+      this.showCreateBranchDialog = false;
+    },
+    async onCreateBranch(branchName) {
+      if (!branchName || !this.selectedProject) return;
+      await axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.selectedProject.projectId
+          }/operations/branch/create`,
+          { branch: branchName },
+          await AuthService.getAuthHeader()
+        )
+        .then(() => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Branch created: " + branchName,
+          });
+          this.onCloseCreateBranchDialog();
+          this.refresh();
+        })
+        .catch(handleError);
+    },
+    async deleteBranch(project) {
+      const branch =
+        project.status && project.status.currentBranch
+          ? project.status.currentBranch
+          : null;
+      if (!branch) {
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "warning",
+          text: "No branch selected for deletion.",
+        });
+        return;
+      }
+      if (
+        !confirm(
+          `Are you sure you want to delete branch "${branch}" for project "${project.name}"?`
+        )
+      )
+        return;
+      await axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            project.projectId
+          }/operations/branch/delete`,
+          { branch },
+          await AuthService.getAuthHeader()
+        )
+        .then(() => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Branch deleted: " + branch,
+          });
+          this.refresh();
+        })
+        .catch(handleError);
+    },
   },
 };
 </script>
@@ -191,9 +269,5 @@ export default {
 #object-list span,
 #object-list p {
   font-size: 0.9em;
-}
-
-.project-controls button {
-  margin-right: 0.5rem;
 }
 </style>

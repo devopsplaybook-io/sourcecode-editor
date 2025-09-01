@@ -1,50 +1,49 @@
 <template>
-  <div>
-    <dialog id="dialog-details" open>
-      <article>
-        <header>
-          <a
-            href="#close"
-            aria-label="Close"
-            class="close"
-            v-on:click="clickClose()"
-          ></a>
-          Commit / Push: {{ project.name }}
-        </header>
-        <label>Files</label>
+  <dialog id="dialog-details" open>
+    <article>
+      <header>
+        <a
+          href="#close"
+          aria-label="Close"
+          class="close"
+          v-on:click="clickClose()"
+        ></a>
+        Commit / Push: {{ project.name }}
+      </header>
+      <label>Files</label>
+      <div
+        v-if="
+          project.status.filesUpdateStatus &&
+          project.status.filesUpdateStatus.length
+        "
+      >
         <div
-          v-if="
-            project.status.filesUpdateStatus &&
-            project.status.filesUpdateStatus.length
-          "
+          v-for="(file, idx) in project.status.filesUpdateStatus"
+          :key="file.path"
         >
-          <div
-            v-for="(file, idx) in project.status.filesUpdateStatus"
-            :key="file.path"
+          <input
+            type="checkbox"
+            :id="'file-' + idx"
+            :value="file.path"
+            v-model="selectedFiles"
+          />
+          <label :for="'file-' + idx"
+            >{{ file.path }} <span>[{{ file.state }}]</span></label
           >
-            <input
-              type="checkbox"
-              :id="'file-' + idx"
-              :value="file.path"
-              v-model="selectedFiles"
-            />
-            <label :for="'file-' + idx"
-              >{{ file.path }} <span>[{{ file.state }}]</span></label
-            >
-          </div>
         </div>
-        <div v-else>No modified files.</div>
-        <label>Commit Message</label>
-        <textarea v-model="commitMessage" />
-        <div class="project-controls">
-          <button @click="selectAll()">Select All</button>
-          <button @click="commit()">Commit</button>
-          <button @click="push()">Push</button>
-          <button @click="reset()">Reset</button>
-        </div>
-      </article>
-    </dialog>
-  </div>
+      </div>
+      <div v-else>No modified files.</div>
+      <label>Commit Message</label>
+      <textarea v-model="commitMessage" />
+      <div class="action-controls">
+        <button @click="selectAll()">Select All</button>
+        <button @click="commit()">Commit</button>
+        <button @click="push()">Push</button>
+        <button @click="reset()">Reset</button>
+        <button @click="clickClose()">Cancel</button>
+      </div>
+    </article>
+  </dialog>
 </template>
 
 <script>

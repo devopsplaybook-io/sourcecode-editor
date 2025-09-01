@@ -73,6 +73,10 @@ main {
   }
 }
 
+.action-controls button {
+  margin-right: 0.5rem;
+}
+
 /* Aninations */
 
 .fade-in-slow {
