@@ -43,10 +43,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitClone(OTelRequestSpan(req), project)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -74,11 +72,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitCheckout(OTelRequestSpan(req), project, req.body.branch)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
-
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -103,10 +98,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitPull(OTelRequestSpan(req), project)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -131,11 +124,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitReset(OTelRequestSpan(req), project)
-        .then(() => {
-          console.log("Reset done");
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -158,13 +148,11 @@ export class ProjectsOperationsRoutes {
         req.params.projectId
       );
       if (!project) {
-        ProjectsSyncStartProject(null, project).catch((err) => {
-          logger.error("ProjectsSyncStartProject Failed: " + err.message);
-        });
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitCommit(OTelRequestSpan(req), project, req.body.files, req.body.message)
-        .then(() => {
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -189,10 +177,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitPush(OTelRequestSpan(req), project)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -216,10 +202,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitCreateBranch(OTelRequestSpan(req), project, req.body.branch)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {
@@ -243,10 +227,8 @@ export class ProjectsOperationsRoutes {
         return res.status(401).send({ error: "Operation Rejected" });
       }
       GitDeleteBranch(OTelRequestSpan(req), project, req.body.branch)
-        .then(() => {
-          ProjectsSyncStartProject(null, project).catch((err) => {
-            logger.error("ProjectsSyncStartProject Failed: " + err.message);
-          });
+        .then(async () => {
+          await ProjectsSyncStartProject(OTelRequestSpan(req), project);
           res.status(201).send({});
         })
         .catch((err) => {

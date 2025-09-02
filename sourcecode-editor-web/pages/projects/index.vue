@@ -30,17 +30,34 @@
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
         <button @click="pullProject(project)">Pull</button>
-        <button @click="commitPushProject(project)">Commit/Push</button>
+        <button
+          v-if="
+            project.status.filesUpdateStatus &&
+            project.status.filesUpdateStatus.length > 0
+          "
+          @click="commitProject(project)"
+        >
+          Commit
+        </button>
+        <button @click="pushProject(project)">Push</button>
         <button v-if="!project.status" @click="cloneProject(project)">
           Clone
         </button>
         <!-- New buttons for branch creation and deletion -->
         <button @click="openCreateBranchDialog(project)">Create Branch</button>
-        <button @click="deleteBranch(project)">Delete Branch</button>
+        <button
+          v-if="
+            project.status.currentBranch != 'main' &&
+            project.status.currentBranch != 'master'
+          "
+          @click="deleteBranch(project)"
+        >
+          Delete Branch
+        </button>
       </div>
     </article>
-    <DialogCommitPush
-      v-if="showCommitPushDialog"
+    <DialogCommit
+      v-if="showCommitDialog"
       :project="selectedProject"
       @onClose="onCloseDialog()"
     />
@@ -48,8 +65,7 @@
     <DialogCreateBranch
       v-if="showCreateBranchDialog"
       :project="selectedProject"
-      @onClose="onCloseCreateBranchDialog"
-      @onCreate="onCreateBranch"
+      @onClose="onCloseDialog()"
     />
   </div>
 </template>
@@ -68,7 +84,7 @@ export default {
   data() {
     return {
       selectedBranches: {},
-      showCommitPushDialog: false,
+      showCommitDialog: false,
       selectedProject: null,
       showCreateBranchDialog: false,
     };
@@ -94,6 +110,7 @@ export default {
             type: "info",
             text: "Repository Cloned",
           });
+          GitProjectsStore().fetch();
         })
         .catch(handleError);
     },
@@ -111,19 +128,43 @@ export default {
             type: "info",
             text: "Pulled",
           });
+          GitProjectsStore().fetch();
         })
         .catch(handleError);
     },
-    commitPushProject(project) {
+    commitProject(project) {
       this.selectedProject = project;
-      this.showCommitPushDialog = true;
+      this.showCommitDialog = true;
+    },
+    async pushProject(project) {
+      axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            project.projectId
+          }/operations/push`,
+          {},
+          await AuthService.getAuthHeader()
+        )
+        .then(async (res) => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Pushed",
+          });
+        })
+        .catch(handleError);
     },
     onCloseDialog() {
+      GitProjectsStore().fetch();
       this.selectedProject = null;
-      this.showCommitPushDialog = false;
+      this.showCommitDialog = false;
+      this.showCreateBranchDialog = false;
     },
     refresh() {
-      this.fetchProjects();
+      GitProjectsStore().fetch();
+      EventBus.emit(EventTypes.ALERT_MESSAGE, {
+        type: "info",
+        text: "Refreshing...",
+      });
     },
     async onBranchSelect(project, event) {
       const branch = event.target.value;
@@ -136,6 +177,7 @@ export default {
           await AuthService.getAuthHeader()
         )
         .then(async (res) => {
+          GitProjectsStore().fetch();
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Checkout Branch: " + branch,
@@ -150,26 +192,6 @@ export default {
     onCloseCreateBranchDialog() {
       this.selectedProject = null;
       this.showCreateBranchDialog = false;
-    },
-    async onCreateBranch(branchName) {
-      if (!branchName || !this.selectedProject) return;
-      await axios
-        .post(
-          `${(await Config.get()).SERVER_URL}/projects/${
-            this.selectedProject.projectId
-          }/operations/branch/create`,
-          { branch: branchName },
-          await AuthService.getAuthHeader()
-        )
-        .then(() => {
-          EventBus.emit(EventTypes.ALERT_MESSAGE, {
-            type: "info",
-            text: "Branch created: " + branchName,
-          });
-          this.onCloseCreateBranchDialog();
-          this.refresh();
-        })
-        .catch(handleError);
     },
     async deleteBranch(project) {
       const branch =

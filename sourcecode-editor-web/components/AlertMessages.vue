@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="alert-messages-container">
     <div v-for="message in messages" v-bind:key="message.text">
       <div :class="'message message-' + message.type">
         <b>{{ message.type }}</b>
@@ -30,10 +30,19 @@ export default {
 };
 </script>
 <style>
+.alert-messages-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 99999;
+  pointer-events: none;
+}
 .message {
   padding: 1rem;
   margin: 1rem;
   color: #eee;
+  pointer-events: auto;
 }
 .message {
   background-color: #546e7a;

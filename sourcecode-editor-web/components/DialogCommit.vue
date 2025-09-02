@@ -38,7 +38,6 @@
       <div class="action-controls">
         <button @click="selectAll()">Select All</button>
         <button @click="commit()">Commit</button>
-        <button @click="push()">Push</button>
         <button @click="reset()">Reset</button>
         <button @click="clickClose()">Cancel</button>
       </div>
@@ -64,7 +63,7 @@ export default {
   },
   async created() {},
   methods: {
-    async clickClose(namespace, podname) {
+    async clickClose() {
       this.$emit("onClose", {});
     },
     async commit() {
@@ -84,27 +83,18 @@ export default {
             type: "info",
             text: "Committed",
           });
-        })
-        .catch(handleError);
-    },
-    async push() {
-      axios
-        .post(
-          `${(await Config.get()).SERVER_URL}/projects/${
-            this.project.projectId
-          }/operations/push`,
-          {},
-          await AuthService.getAuthHeader()
-        )
-        .then(async (res) => {
-          EventBus.emit(EventTypes.ALERT_MESSAGE, {
-            type: "info",
-            text: "Pushed",
-          });
+          this.$emit("onClose", {});
         })
         .catch(handleError);
     },
     async reset() {
+      if (
+        !confirm(
+          "Are you sure you want to reset? This will discard all uncommitted changes."
+        )
+      ) {
+        return;
+      }
       axios
         .post(
           `${(await Config.get()).SERVER_URL}/projects/${
@@ -118,6 +108,7 @@ export default {
             type: "info",
             text: "Reset",
           });
+          this.$emit("onClose", {});
         })
         .catch(handleError);
     },

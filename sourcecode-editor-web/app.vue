@@ -74,6 +74,8 @@ main {
 }
 
 .action-controls button {
+  font-size: 0.8rem;
+  padding: 0.5rem 0.8rem;
   margin-right: 0.5rem;
 }
 

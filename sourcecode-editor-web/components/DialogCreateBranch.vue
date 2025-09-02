@@ -26,6 +26,11 @@
 </template>
 
 <script>
+import axios from "axios";
+import Config from "~~/services/Config.ts";
+import { handleError, EventBus, EventTypes } from "~~/services/EventBus";
+import { AuthService } from "~~/services/AuthService";
+
 export default {
   props: {
     project: { type: Object, required: true },
@@ -33,16 +38,33 @@ export default {
   data() {
     return {
       branchName: "",
-      error: "",
     };
   },
   methods: {
-    submit() {
+    async submit() {
       if (!this.branchName.trim()) {
-        this.error = "Branch name is required";
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "info",
+          text: "Branch deleted: " + branch,
+        });
         return;
       }
-      this.$emit("onCreate", this.branchName.trim());
+      await axios
+        .post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.project.projectId
+          }/operations/branch/create`,
+          { branch: this.branchName.trim() },
+          await AuthService.getAuthHeader()
+        )
+        .then(() => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Branch created: " + this.branchName.trim(),
+          });
+          this.$emit("onClose");
+        })
+        .catch(handleError);
     },
     clickClose() {
       this.$emit("onClose");
