@@ -14,7 +14,7 @@
         {{ project.name }}
       </option>
     </select>
-    <div id="code-layout-files-tree">
+    <div v-if="selectedProjectId" id="code-layout-files-tree">
       <FileTree :files="files" @file-selected="onFileSelected" />
     </div>
     <div id="code-layout-files-editor">

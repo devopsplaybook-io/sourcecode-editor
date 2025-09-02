@@ -32,9 +32,8 @@ export default {
 <style>
 .alert-messages-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
+  bottom: 0;
+  right: 0;
   z-index: 99999;
   pointer-events: none;
 }
