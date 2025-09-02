@@ -10,9 +10,11 @@ import {
 import { AuthGetUserSession } from "../users/Auth";
 import {
   ProjectsSyncGetStatusProject,
+  ProjectsSyncStart,
   ProjectsSyncStartProject,
 } from "./ProjectsSync";
 import { OTelLogger } from "../OTelContext";
+import { GitClone } from "../git/Git";
 
 const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
 export class ProjectsRoutes {
@@ -45,10 +47,17 @@ export class ProjectsRoutes {
       project.name = req.body.name;
       project.info = req.body.info || "";
       await ProjectsDataAdd(OTelRequestSpan(req), project);
-      ProjectsSyncStartProject(null, project).catch((err) => {
-        logger.error(`Error Triggering Project Sync: ${err.message}`);
-      });
+      await GitClone(OTelRequestSpan(req), project);
+      await ProjectsSyncStartProject(OTelRequestSpan(req), project);
 
+      res.status(201).send({});
+    });
+
+    fastify.post<{}>("/sync", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      await ProjectsSyncStart(OTelRequestSpan(req));
       res.status(201).send({});
     });
 

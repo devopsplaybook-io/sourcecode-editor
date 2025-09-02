@@ -309,6 +309,48 @@ export async function GitDeleteBranch(
   }
 }
 
+export async function GitGetBranchStatus(
+  context: Span,
+  project: Project
+): Promise<{ behind: number; ahead: number }> {
+  const span = OTelTracer().startSpan("GitGetBranchStatus", context);
+  try {
+    const gitEnv = await GitEnv(span);
+    const projectPath = `${projectParentFolder}/${project.projectId}`;
+    const currentBranch = await GitGetBranchCurrent(span, project);
+    await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git fetch origin`
+    );
+    try {
+      await SystemCommandExecute(
+        span,
+        `${gitEnv} && cd ${projectPath} && git rev-parse --verify origin/${currentBranch}`
+      );
+    } catch {
+      span.end();
+      return { behind: 0, ahead: 0 };
+    }
+    const behindOutput = await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git rev-list --count HEAD..origin/${currentBranch}`
+    );
+    const behind = parseInt(behindOutput.trim()) || 0;
+    const aheadOutput = await SystemCommandExecute(
+      span,
+      `${gitEnv} && cd ${projectPath} && git rev-list --count origin/${currentBranch}..HEAD`
+    );
+    const ahead = parseInt(aheadOutput.trim()) || 0;
+
+    span.end();
+    return { behind, ahead };
+  } catch (err) {
+    logger.error(`Failed to get branch status: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
+
 // Private Function
 
 async function GitConfigUser(

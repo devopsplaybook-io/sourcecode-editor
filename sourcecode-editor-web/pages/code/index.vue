@@ -39,6 +39,7 @@ import { AuthService } from "~~/services/AuthService";
 import Config from "~~/services/Config.ts";
 import { EventBus, EventTypes, handleError } from "~~/services/EventBus";
 import { UtilsDecompressData, UtilsCompressData } from "~~/services/Utils";
+import { CodePreferencesService } from "~~/services/CodePreferencesService";
 import debounce from "lodash/debounce";
 
 export default {
@@ -55,13 +56,27 @@ export default {
     if (!(await AuthenticationStore().ensureAuthenticated())) {
       useRouter().push({ path: "/users" });
     }
-    GitProjectsStore().fetch();
+    await GitProjectsStore().fetch();
+    this.loadLastSelectedProject();
     this.debouncedOnFileContentChange = debounce(
       this.onFileContentChange,
       1000
     );
   },
   methods: {
+    loadLastSelectedProject() {
+      const lastProjectId = CodePreferencesService.getLastProjectId();
+      if (
+        lastProjectId &&
+        CodePreferencesService.isValidProject(
+          lastProjectId,
+          GitProjectsStore().projects
+        )
+      ) {
+        this.selectedProjectId = lastProjectId;
+        this.fetchFiles();
+      }
+    },
     async fetchFiles() {
       await axios
         .get(
@@ -77,6 +92,7 @@ export default {
         .catch(handleError);
     },
     onProjectChange() {
+      CodePreferencesService.setLastProjectId(this.selectedProjectId);
       this.fetchFiles();
     },
     async onFileSelected(file) {

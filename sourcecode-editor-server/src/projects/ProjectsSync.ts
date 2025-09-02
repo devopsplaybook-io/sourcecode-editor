@@ -3,6 +3,7 @@ import { Span } from "@opentelemetry/sdk-trace-base";
 import { Config } from "../Config";
 import {
   GitGetBranchCurrent,
+  GitGetBranchStatus,
   GitListBranches,
   GitListModifiedFiles,
 } from "../git/Git";
@@ -71,6 +72,8 @@ export async function ProjectsSyncStartProject(
     }
 
     projectStatus.filesUpdateStatus = await GitListModifiedFiles(span, project);
+
+    projectStatus.branchStatus = await GitGetBranchStatus(span, project);
   } catch (err) {
     logger.info(
       `Project sync failed for project: ${project.projectId}: ${err.message}`

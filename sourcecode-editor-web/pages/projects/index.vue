@@ -29,7 +29,15 @@
         <NuxtLink :to="'/projects/' + project.projectId"
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
-        <button @click="pullProject(project)">Pull</button>
+        <button
+          v-if="
+            project.status.branchStatus &&
+            project.status.branchStatus.behind > 0
+          "
+          @click="pullProject(project)"
+        >
+          Pull ({{ project.status.branchStatus.behind }} behind)
+        </button>
         <button
           v-if="
             project.status.filesUpdateStatus &&
@@ -39,7 +47,14 @@
         >
           Commit
         </button>
-        <button @click="pushProject(project)">Push</button>
+        <button
+          v-if="
+            project.status.branchStatus && project.status.branchStatus.ahead > 0
+          "
+          @click="pushProject(project)"
+        >
+          Push ({{ project.status.branchStatus.ahead }} ahead)
+        </button>
         <button v-if="!project.status" @click="cloneProject(project)">
           Clone
         </button>
@@ -94,6 +109,20 @@ export default {
       useRouter().push({ path: "/users" });
     }
     GitProjectsStore().fetch();
+    EventBus.emit(EventTypes.ALERT_MESSAGE, {
+      type: "info",
+      text: "Fecthing Repository Details....",
+    });
+    axios
+      .post(
+        `${(await Config.get()).SERVER_URL}/projects/sync`,
+        {},
+        await AuthService.getAuthHeader()
+      )
+      .then(async (res) => {
+        GitProjectsStore().fetch();
+      })
+      .catch(handleError);
   },
   methods: {
     async cloneProject(project) {

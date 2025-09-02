@@ -5,6 +5,7 @@ export class ProjectStatus {
   branches: string[];
   currentBranch: string;
   filesUpdateStatus: FileUpdateStatus[];
+  branchStatus: { behind: number; ahead: number };
   constructor(partial?: Partial<ProjectStatus>) {
     if (partial) {
       Object.assign(this, partial);
