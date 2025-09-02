@@ -1,10 +1,12 @@
 <template>
   <li class="tree-node">
     <div class="node-content" @click="handleClick">
-      <span v-if="!node.isFile" class="folder-icon">
-        {{ isExpanded ? "📂" : "📁" }}
-      </span>
-      <span v-else class="file-icon">📄</span>
+      <i v-if="!node.isFile && !isExpanded" class="bi bi-folder2 file-icon"></i>
+      <i
+        v-else-if="!node.isFile && isExpanded"
+        class="bi bi-folder2-open file-icon"
+      ></i>
+      <i v-else class="bi bi-file-earmark file-icon"></i>
       <span class="node-name">{{ node.name }}</span>
     </div>
 
@@ -66,11 +68,11 @@ export default {
 .folder-icon,
 .file-icon {
   margin-right: 0.3rem;
-  font-size: 0.8rem;
+  font-size: 1rem;
 }
 
 .node-name {
-  font-size: 0.8rem;
+  font-size: 1rem;
 }
 
 .children {
