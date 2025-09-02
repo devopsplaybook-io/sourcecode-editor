@@ -4,7 +4,11 @@
       <i class="bi bi-arrow-clockwise" v-on:click="refresh()"></i>
       <NuxtLink to="/projects/new"><i class="bi bi-plus-square"></i></NuxtLink>
     </div>
-    <article v-for="project in projects" :key="project.id" class="project-card">
+    <article
+      v-for="project in gitProjectsStore.projects"
+      :key="project.id"
+      class="project-card"
+    >
       <header>{{ project.name }}</header>
       <div v-if="project.status" class="action-controls">
         <select
@@ -51,7 +55,7 @@
 </template>
 
 <script setup>
-const authenticationStore = AuthenticationStore();
+const gitProjectsStore = GitProjectsStore();
 </script>
 
 <script>
@@ -63,8 +67,6 @@ import { AuthService } from "~~/services/AuthService";
 export default {
   data() {
     return {
-      projects: [],
-      projectsStatuses: [],
       selectedBranches: {},
       showCommitPushDialog: false,
       selectedProject: null,
@@ -75,33 +77,9 @@ export default {
     if (!(await AuthenticationStore().ensureAuthenticated())) {
       useRouter().push({ path: "/users" });
     }
-    this.fetchProjects();
+    GitProjectsStore().fetch();
   },
   methods: {
-    async fetchProjects() {
-      await axios
-        .get(
-          `${(await Config.get()).SERVER_URL}/projects`,
-          await AuthService.getAuthHeader()
-        )
-        .then(async (res) => {
-          this.projects = res.data.projects;
-          this.projects.forEach(async (project) => {
-            axios
-              .get(
-                `${(await Config.get()).SERVER_URL}/projects/${
-                  project.projectId
-                }/status`,
-                await AuthService.getAuthHeader()
-              )
-              .then(async (res) => {
-                project.status = res.data.status;
-              })
-              .catch(handleError);
-          });
-        })
-        .catch(handleError);
-    },
     async cloneProject(project) {
       axios
         .post(

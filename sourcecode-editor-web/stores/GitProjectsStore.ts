@@ -5,13 +5,11 @@ import { handleError, EventBus, EventTypes } from "~~/services/EventBus";
 
 export const GitProjectsStore = defineStore("GitProjectsStore", {
   state: () => ({
-    data: {
-      projects: [],
-    },
+    projects: [],
   }),
   getters: {},
   actions: {
-    async fetch() {
+    async fetch(): Promise<void> {
       await axios
         .get(
           `${(await Config.get()).SERVER_URL}/projects`,
@@ -19,7 +17,7 @@ export const GitProjectsStore = defineStore("GitProjectsStore", {
         )
         .then(async (res) => {
           this.projects = res.data.projects;
-          this.projects.forEach(async (project) => {
+          this.projects.forEach(async (project: any) => {
             axios
               .get(
                 `${(await Config.get()).SERVER_URL}/projects/${

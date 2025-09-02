@@ -7,7 +7,7 @@
     >
       <option disabled value="">Select a project</option>
       <option
-        v-for="project in projects"
+        v-for="project in gitProjectsStore.projects"
         :key="project.projectId"
         :value="project.projectId"
       >
@@ -28,6 +28,10 @@
   </div>
 </template>
 
+<script setup>
+const gitProjectsStore = GitProjectsStore();
+</script>
+
 <script>
 import axios from "axios";
 import FileTree from "~/components/FileTree.vue";
@@ -42,7 +46,6 @@ export default {
   data() {
     return {
       files: [],
-      projects: [],
       selectedProjectId: null,
       fileContent: "",
       fileActive: null,
@@ -52,7 +55,7 @@ export default {
     if (!(await AuthenticationStore().ensureAuthenticated())) {
       useRouter().push({ path: "/users" });
     }
-    await this.fetchProjects();
+    GitProjectsStore().fetch();
     this.debouncedOnFileContentChange = debounce(
       this.onFileContentChange,
       1000
@@ -70,17 +73,6 @@ export default {
         .then(async (res) => {
           // If the API does not return a tree, you may need to convert the flat list to a tree here.
           this.files = res.data.files;
-        })
-        .catch(handleError);
-    },
-    async fetchProjects() {
-      await axios
-        .get(
-          `${(await Config.get()).SERVER_URL}/projects`,
-          await AuthService.getAuthHeader()
-        )
-        .then(async (res) => {
-          this.projects = res.data.projects;
         })
         .catch(handleError);
     },
