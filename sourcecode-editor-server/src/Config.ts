@@ -18,7 +18,8 @@ export class Config implements ConfigOTelInterface {
   public JWT_KEY: string = uuidv4();
   public LOG_LEVEL = "info";
   public PROJECTS_SYNC_FREQUENCY = 3_600_000;
-  public STATS_RETENTION = 60 * 60 * 24;
+  public GIT_USERNAME = "";
+  public GIT_EMAIL = "";
   public OPENTELEMETRY_COLLECTOR_HTTP_TRACES = "";
   public OPENTELEMETRY_COLLECTOR_HTTP_METRICS = "";
   public OPENTELEMETRY_COLLECTOR_HTTP_LOGS = "";
@@ -70,7 +71,8 @@ export class Config implements ConfigOTelInterface {
     setIfSet("JWT_KEY", false);
     setIfSet("LOG_LEVEL");
     setIfSet("PROJECTS_SYNC_FREQUENCY");
-    setIfSet("STATS_RETENTION");
+    setIfSet("GIT_USERNAME");
+    setIfSet("GIT_EMAIL");
     setIfSet("OPENTELEMETRY_COLLECTOR_HTTP_TRACES");
     setIfSet("OPENTELEMETRY_COLLECTOR_HTTP_METRICS");
     setIfSet("OPENTELEMETRY_COLLECTOR_HTTP_LOGS");

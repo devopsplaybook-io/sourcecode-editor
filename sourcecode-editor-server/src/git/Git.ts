@@ -17,6 +17,11 @@ export async function GitInit(context: Span, configIn: Config): Promise<void> {
   config = configIn;
   projectParentFolder = path.join(config.DATA_DIR, "/projects/");
   ensureDir(projectParentFolder);
+  if (config.GIT_USERNAME && config.GIT_EMAIL) {
+    await GitConfigUser(span, config.GIT_USERNAME, config.GIT_EMAIL);
+  } else {
+    logger.warn("Git username or email is not set");
+  }
   span.end();
 }
 
@@ -305,6 +310,30 @@ export async function GitDeleteBranch(
 }
 
 // Private Function
+
+async function GitConfigUser(
+  context: Span,
+  userName: string,
+  userEmail: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("GitConfigUser", context);
+  try {
+    logger.info(`Setting global git user: ${userName}, email: ${userEmail}`);
+    await SystemCommandExecute(
+      span,
+      `git config --global user.name "${userName}"`
+    );
+    await SystemCommandExecute(
+      span,
+      `git config --global user.email "${userEmail}"`
+    );
+    span.end();
+  } catch (err) {
+    logger.error(`Failed to set git user config: ${err.message}`);
+    span.end();
+    throw err;
+  }
+}
 
 async function GitEnv(context: Span): Promise<string> {
   const span = OTelTracer().startSpan("GitEnv", context);
