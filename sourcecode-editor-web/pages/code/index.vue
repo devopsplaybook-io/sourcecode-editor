@@ -15,7 +15,13 @@
       </option>
     </select>
     <div v-if="selectedProjectId" id="code-layout-files-tree">
-      <FileTree :files="files" @file-selected="onFileSelected" />
+      <FileTree
+        :files="files"
+        @file-selected="onFileSelected"
+        @rename-file="onRenameFile"
+        @delete-file="onDeleteFile"
+        @create-file="onCreateFile"
+      />
     </div>
     <div id="code-layout-files-editor">
       <textarea
@@ -112,6 +118,53 @@ export default {
           ).content;
         })
         .catch(handleError);
+    },
+    async onRenameFile({ oldPath, newPath }) {
+      try {
+        await axios.post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.selectedProjectId
+          }/files/rename`,
+          { oldPath, newPath },
+          await AuthService.getAuthHeader()
+        );
+        this.fetchFiles();
+      } catch (e) {
+        handleError(e);
+      }
+    },
+    async onDeleteFile(filePath) {
+      console.log("HEY DELETE" + filePath);
+      try {
+        await axios.post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.selectedProjectId
+          }/files/delete`,
+          { filePath },
+          await AuthService.getAuthHeader()
+        );
+        this.fetchFiles();
+        if (this.fileActive && this.fileActive.path === filePath) {
+          this.fileActive = null;
+          this.fileContent = "";
+        }
+      } catch (e) {
+        handleError(e);
+      }
+    },
+    async onCreateFile({ parentPath, fileName }) {
+      try {
+        await axios.post(
+          `${(await Config.get()).SERVER_URL}/projects/${
+            this.selectedProjectId
+          }/files/create`,
+          { parentPath, fileName },
+          await AuthService.getAuthHeader()
+        );
+        this.fetchFiles();
+      } catch (e) {
+        handleError(e);
+      }
     },
     onFileContentInput() {
       this.debouncedOnFileContentChange(this.fileContent);

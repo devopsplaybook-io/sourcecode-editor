@@ -8,6 +8,19 @@
       ></i>
       <i v-else class="bi bi-file-earmark file-icon"></i>
       <span class="node-name">{{ node.name }}</span>
+      <span class="node-actions" @click.stop>
+        <i v-if="node.isFile" class="bi bi-cursor-text" @click="emitRename" />
+        <i
+          v-if="node.isFile"
+          class="bi bi-file-earmark-x"
+          @click="emitDelete"
+        />
+        <i
+          v-if="!node.isFile"
+          class="bi bi-file-earmark-plus"
+          @click="emitCreate"
+        />
+      </span>
     </div>
 
     <ul
@@ -35,15 +48,35 @@ export default {
   },
   data() {
     return {
-      isExpanded: false,
+      isExpanded: this.node.name === "/" ? true : false,
     };
   },
   methods: {
     handleClick() {
       if (this.node.isFile) {
         this.$emit("file-selected", this.node.path);
-      } else {
+      } else if (this.node.name !== "/") {
         this.isExpanded = !this.isExpanded;
+      }
+    },
+    emitRename() {
+      const newPath = prompt(
+        "Enter new name or path for file:",
+        this.node.path
+      );
+      if (newPath && newPath !== this.node.path) {
+        this.$emit("rename-file", { oldPath: this.node.path, newPath });
+      }
+    },
+    emitCreate() {
+      const fileName = prompt("Enter new file name:");
+      if (fileName) {
+        this.$emit("create-file", { parentPath: this.node.path, fileName });
+      }
+    },
+    emitDelete() {
+      if (confirm(`Delete file '${this.node.name}'?`)) {
+        this.$emit("delete-file", this.node.path);
       }
     },
   },
@@ -58,11 +91,12 @@ export default {
 }
 
 .node-content {
-  display: flex;
+  display: grid;
   align-items: center;
   padding: 2px 0;
   cursor: pointer;
   user-select: none;
+  grid-template-columns: auto 1fr auto;
 }
 
 .folder-icon,
@@ -79,5 +113,9 @@ export default {
   list-style: none;
   padding-left: 1em;
   margin: 0;
+}
+.node-actions i {
+  margin-left: 0.5rem;
+  cursor: pointer;
 }
 </style>

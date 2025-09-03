@@ -1,10 +1,11 @@
 <template>
   <ul class="file-tree">
     <FileTreeNode
-      v-for="node in treeData"
-      :key="node.name"
-      :node="node"
+      :node="rootNode"
       @file-selected="onFileSelected"
+      @create-file="$emit('create-file', $event)"
+      @rename-file="$emit('rename-file', $event)"
+      @delete-file="$emit('delete-file', $event)"
     />
   </ul>
 </template>
@@ -26,6 +27,14 @@ export default {
   computed: {
     treeData() {
       return this.buildTree(this.files);
+    },
+    rootNode() {
+      return {
+        name: "/",
+        path: "",
+        isFile: false,
+        children: this.treeData,
+      };
     },
   },
   methods: {

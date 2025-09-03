@@ -1,3 +1,38 @@
+export async function FilesProjectCreate(
+  context: Span,
+  project: Project,
+  parentPath: string,
+  fileName: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("FilesProjectCreate", context);
+  try {
+    const projectFolder = path.join(projectParentFolder, project.projectId);
+    const absParentPath = path.join(projectFolder, parentPath);
+    await ensureDir(absParentPath);
+    const absFilePath = path.join(absParentPath, fileName);
+    await fs.writeFile(absFilePath, "", { flag: "wx" }); // create new file, fail if exists
+    span.end();
+  } catch (err) {
+    span.end();
+    throw err;
+  }
+}
+export async function FilesProjectDelete(
+  context: Span,
+  project: Project,
+  filePath: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("FilesProjectDelete", context);
+  try {
+    const projectFolder = path.join(projectParentFolder, project.projectId);
+    const absPath = path.join(projectFolder, filePath);
+    await fs.rm(absPath, { recursive: true, force: true });
+    span.end();
+  } catch (err) {
+    span.end();
+    throw err;
+  }
+}
 import { Span } from "@opentelemetry/sdk-trace-base";
 import { Project } from "../model/Project";
 import { OTelLogger, OTelTracer } from "../OTelContext";
@@ -80,6 +115,26 @@ export async function FilesProjectUpdate(
     const absPath = path.join(projectFolder, filePath);
     await ensureDir(path.dirname(absPath));
     await fs.writeFile(absPath, content, "utf-8");
+    span.end();
+  } catch (err) {
+    span.end();
+    throw err;
+  }
+}
+
+export async function FilesProjectRename(
+  context: Span,
+  project: Project,
+  oldPath: string,
+  newPath: string
+): Promise<void> {
+  const span = OTelTracer().startSpan("FilesProjectRename", context);
+  try {
+    const projectFolder = path.join(projectParentFolder, project.projectId);
+    const absOldPath = path.join(projectFolder, oldPath);
+    const absNewPath = path.join(projectFolder, newPath);
+    await ensureDir(path.dirname(absNewPath));
+    await fs.rename(absOldPath, absNewPath);
     span.end();
   } catch (err) {
     span.end();
