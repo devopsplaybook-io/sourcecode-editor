@@ -32,6 +32,9 @@
         :key="child.name"
         :node="child"
         @file-selected="$emit('file-selected', $event)"
+        @delete-file="$emit('delete-file', $event)"
+        @rename-file="$emit('rename-file', $event)"
+        @create-file="$emit('create-file', $event)"
       />
     </ul>
   </li>
@@ -40,6 +43,7 @@
 <script>
 export default {
   name: "FileTreeNode",
+  emits: ["file-selected", "delete-file", "rename-file", "create-file"],
   props: {
     node: {
       type: Object,

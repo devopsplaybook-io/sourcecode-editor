@@ -3,9 +3,9 @@
     <FileTreeNode
       :node="rootNode"
       @file-selected="onFileSelected"
-      @create-file="$emit('create-file', $event)"
-      @rename-file="$emit('rename-file', $event)"
       @delete-file="$emit('delete-file', $event)"
+      @rename-file="$emit('rename-file', $event)"
+      @create-file="$emit('create-file', $event)"
     />
   </ul>
 </template>
@@ -15,6 +15,7 @@ import FileTreeNode from "./FileTreeNode.vue";
 
 export default {
   name: "FileTree",
+  emits: ["file-selected", "delete-file", "rename-file", "create-file"],
   props: {
     files: {
       type: Array,

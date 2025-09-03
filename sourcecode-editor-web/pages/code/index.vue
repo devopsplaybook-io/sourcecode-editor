@@ -134,7 +134,6 @@ export default {
       }
     },
     async onDeleteFile(filePath) {
-      console.log("HEY DELETE" + filePath);
       try {
         await axios.post(
           `${(await Config.get()).SERVER_URL}/projects/${
