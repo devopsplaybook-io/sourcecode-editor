@@ -19,12 +19,12 @@ export async function SSHInit(context: Span, configIn: Config): Promise<void> {
   try {
     await fs.access(privateKeyPath);
   } catch {
-    logger.info("Generating new SSH key pair");
+    logger.info("Generating new SSH key pair", span);
     await SystemCommandExecute(
       span,
       `ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -q`
     );
-    logger.info("SSH key pair generated.");
+    logger.info("SSH key pair generated.", span);
   }
   span.end();
 }
@@ -37,8 +37,8 @@ export async function SSHGetPublicKey(context: Span): Promise<string> {
     span.end();
     return pubKey.trim();
   } catch (err) {
+    logger.error("Failed to read SSH public key", err, span);
     span.end();
-    logger.error("Failed to read SSH public key: " + err.message);
     throw err;
   }
 }
@@ -51,8 +51,8 @@ export async function SSHGetPrivateKeyPath(context: Span): Promise<string> {
     span.end();
     return privateKeyPath;
   } catch (err) {
+    logger.error("Failed to access SSH private key", err, span);
     span.end();
-    logger.error("Failed to access SSH private key: " + err.message);
     throw err;
   }
 }

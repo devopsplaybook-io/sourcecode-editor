@@ -20,7 +20,7 @@ export async function GitInit(context: Span, configIn: Config): Promise<void> {
   if (config.GIT_USERNAME && config.GIT_EMAIL) {
     await GitConfigUser(span, config.GIT_USERNAME, config.GIT_EMAIL);
   } else {
-    logger.warn("Git username or email is not set");
+    logger.warn("Git username or email is not set", span);
   }
   span.end();
 }
@@ -28,7 +28,7 @@ export async function GitInit(context: Span, configIn: Config): Promise<void> {
 export async function GitClone(context: Span, project: Project): Promise<void> {
   const span = OTelTracer().startSpan("GitClone", context);
   try {
-    logger.info(`Cloning project: ${project.projectId} ${project.name}`);
+    logger.info(`Cloning project: ${project.projectId} ${project.name}`, span);
     await remove(path.join(projectParentFolder, project.projectId));
     await SystemCommandExecute(
       span,
@@ -37,7 +37,7 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
       } ${projectParentFolder}/${project.projectId}`
     );
   } catch (err) {
-    logger.error(`Failed to clone project: ${err.message}`);
+    logger.error(`Failed to clone project`, err, span);
     throw err;
   } finally {
     span.end();
@@ -52,7 +52,8 @@ export async function GitCheckout(
   const span = OTelTracer().startSpan("GitCheckout", context);
   try {
     logger.info(
-      `Checkout project branch: ${project.projectId} ${project.name} ${branch}`
+      `Checkout project branch: ${project.projectId} ${project.name} ${branch}`,
+      span
     );
     await SystemCommandExecute(
       span,
@@ -61,7 +62,7 @@ export async function GitCheckout(
       } && git checkout ${branch}`
     );
   } catch (err) {
-    logger.error(`Failed to clone project: ${err.message}`);
+    logger.error(`Failed to checking out project`, err, span);
     throw err;
   } finally {
     span.end();
@@ -71,7 +72,7 @@ export async function GitCheckout(
 export async function GitPull(context: Span, project: Project): Promise<void> {
   const span = OTelTracer().startSpan("GitPull", context);
   try {
-    logger.info(`Pulling: ${project.projectId} ${project.name}`);
+    logger.info(`Pulling: ${project.projectId} ${project.name}`, span);
     await SystemCommandExecute(
       span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
@@ -79,7 +80,7 @@ export async function GitPull(context: Span, project: Project): Promise<void> {
       } && git pull`
     );
   } catch (err) {
-    logger.error(`Failed to pull: ${err.message}`);
+    logger.error(`Failed to pull`, err, span);
     throw err;
   } finally {
     span.end();
@@ -109,7 +110,7 @@ export async function GitListBranches(
     span.end();
     return branches;
   } catch (err) {
-    logger.error(`Failed to get branches: ${err.message}`);
+    logger.error(`Failed to list branches`, err, span);
     span.end();
     throw err;
   }
@@ -146,7 +147,7 @@ export async function GitListModifiedFiles(
     span.end();
     return files;
   } catch (err) {
-    logger.error(`Failed to get modified files: ${err.message}`);
+    logger.error(`Failed to get modified files`, err, span);
     span.end();
     throw err;
   }
@@ -172,7 +173,7 @@ export async function GitGetBranchCurrent(
     span.end();
     return current;
   } catch (err) {
-    logger.error(`Failed to get branch: ${err.message}`);
+    logger.error(`Failed to get branch`, err, span);
     span.end();
     throw err;
   }
@@ -187,7 +188,8 @@ export async function GitCommit(
   const span = OTelTracer().startSpan("GitCommit", context);
   try {
     logger.info(
-      `Committing files: ${files.join(", ")} with message: "${message}"`
+      `Committing files: ${files.join(", ")} with message: "${message}"`,
+      span
     );
     if (files.length > 0) {
       const filesArg = files.map((f) => `"${f}"`).join(" ");
@@ -206,7 +208,7 @@ export async function GitCommit(
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to commit: ${err.message}`);
+    logger.error(`Failed to commit`, err, span);
     span.end();
     throw err;
   }
@@ -215,7 +217,7 @@ export async function GitCommit(
 export async function GitPush(context: Span, project: Project): Promise<void> {
   const span = OTelTracer().startSpan("GitPush", context);
   try {
-    logger.info(`Pushing project: ${project.projectId} ${project.name}`);
+    logger.info(`Pushing project: ${project.projectId} ${project.name}`, span);
     await SystemCommandExecute(
       span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
@@ -224,7 +226,7 @@ export async function GitPush(context: Span, project: Project): Promise<void> {
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to push: ${err.message}`);
+    logger.error(`Failed to push`, err, span);
     span.end();
     throw err;
   }
@@ -233,7 +235,10 @@ export async function GitPush(context: Span, project: Project): Promise<void> {
 export async function GitReset(context: Span, project: Project): Promise<void> {
   const span = OTelTracer().startSpan("GitReset", context);
   try {
-    logger.info(`Resetting project: ${project.projectId} ${project.name}`);
+    logger.info(
+      `Resetting project: ${project.projectId} ${project.name}`,
+      span
+    );
     await SystemCommandExecute(
       span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
@@ -242,7 +247,7 @@ export async function GitReset(context: Span, project: Project): Promise<void> {
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to reset: ${err.message}`);
+    logger.error(`Failed to reset`, err, span);
     span.end();
     throw err;
   }
@@ -256,7 +261,8 @@ export async function GitCreateBranch(
   const span = OTelTracer().startSpan("GitCreateBranch", context);
   try {
     logger.info(
-      `Creating branch: ${branch} in project: ${project.projectId} ${project.name}`
+      `Creating branch: ${branch} in project: ${project.projectId} ${project.name}`,
+      span
     );
     await SystemCommandExecute(
       span,
@@ -266,7 +272,7 @@ export async function GitCreateBranch(
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to create branch: ${err.message}`);
+    logger.error(`Failed to create branch`, err, span);
     span.end();
     throw err;
   }
@@ -280,7 +286,8 @@ export async function GitDeleteBranch(
   const span = OTelTracer().startSpan("GitDeleteBranch", context);
   try {
     logger.info(
-      `Deleting branch: ${branch} in project: ${project.projectId} ${project.name}`
+      `Deleting branch: ${branch} in project: ${project.projectId} ${project.name}`,
+      span
     );
     // Determine default branch (main or master)
     const gitEnv = await GitEnv(span);
@@ -303,7 +310,7 @@ export async function GitDeleteBranch(
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to delete branch: ${err.message}`);
+    logger.error(`Failed to delete branch`, err, span);
     span.end();
     throw err;
   }
@@ -345,7 +352,7 @@ export async function GitGetBranchStatus(
     span.end();
     return { behind, ahead };
   } catch (err) {
-    logger.error(`Failed to get branch status: ${err.message}`);
+    logger.error(`Failed to get branch status`, err, span);
     span.end();
     throw err;
   }
@@ -360,7 +367,10 @@ async function GitConfigUser(
 ): Promise<void> {
   const span = OTelTracer().startSpan("GitConfigUser", context);
   try {
-    logger.info(`Setting global git user: ${userName}, email: ${userEmail}`);
+    logger.info(
+      `Setting global git user: ${userName}, email: ${userEmail}`,
+      span
+    );
     await SystemCommandExecute(
       span,
       `git config --global user.name "${userName}"`
@@ -371,7 +381,7 @@ async function GitConfigUser(
     );
     span.end();
   } catch (err) {
-    logger.error(`Failed to set git user config: ${err.message}`);
+    logger.error(`Failed to set git user config`, err, span);
     span.end();
     throw err;
   }

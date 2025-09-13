@@ -48,7 +48,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Clone Failed: " + err.message);
+          logger.error("Git Clone Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -77,7 +77,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Checkout Failed: " + err.message);
+          logger.error("Git Checkout Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -103,7 +103,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Pull Failed: " + err.message);
+          logger.error("Git Pull Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -129,7 +129,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Reset Failed: " + err.message);
+          logger.error("Git Reset Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -156,7 +156,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Pull Failed: " + err.message);
+          logger.error("Git Pull Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -182,7 +182,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Pull Failed: " + err.message);
+          logger.error("Git Pull Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -207,7 +207,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Create Branch Failed: " + err.message);
+          logger.error("Git Create Branch Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
@@ -232,7 +232,7 @@ export class ProjectsOperationsRoutes {
           res.status(201).send({});
         })
         .catch((err) => {
-          logger.error("Git Delete Branch Failed: " + err.message);
+          logger.error("Git Delete Branch Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });

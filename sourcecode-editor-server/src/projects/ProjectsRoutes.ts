@@ -83,7 +83,11 @@ export class ProjectsRoutes {
       project.info = req.body.info || project.info;
       await ProjectsDataUpdate(OTelRequestSpan(req), project);
       ProjectsSyncStartProject(null, project).catch((err) => {
-        logger.error(`Error Triggering Project Sync: ${err.message}`);
+        logger.error(
+          `Error Triggering Project Sync`,
+          err,
+          OTelRequestSpan(req)
+        );
       });
       res.status(200).send({});
     });

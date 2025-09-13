@@ -54,7 +54,8 @@ export async function ProjectsSyncStartProject(
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncStartProject", context);
   logger.info(
-    `Starting sync for project: ${project.projectId} ${project.name}`
+    `Starting sync for project: ${project.projectId} ${project.name}`,
+    span
   );
   try {
     const projectStatus = new ProjectStatus({ projectId: project.projectId });
@@ -75,8 +76,10 @@ export async function ProjectsSyncStartProject(
 
     projectStatus.branchStatus = await GitGetBranchStatus(span, project);
   } catch (err) {
-    logger.info(
-      `Project sync failed for project: ${project.projectId}: ${err.message}`
+    logger.error(
+      `Project sync failed for project: ${project.projectId}`,
+      err,
+      span
     );
     span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
   }
