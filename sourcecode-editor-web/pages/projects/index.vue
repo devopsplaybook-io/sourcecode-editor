@@ -109,20 +109,6 @@ export default {
       useRouter().push({ path: "/users" });
     }
     GitProjectsStore().fetch();
-    EventBus.emit(EventTypes.ALERT_MESSAGE, {
-      type: "info",
-      text: "Fecthing Repository Details....",
-    });
-    axios
-      .post(
-        `${(await Config.get()).SERVER_URL}/projects/sync`,
-        {},
-        await AuthService.getAuthHeader()
-      )
-      .then(async (res) => {
-        GitProjectsStore().fetch();
-      })
-      .catch(handleError);
   },
   methods: {
     async cloneProject(project) {

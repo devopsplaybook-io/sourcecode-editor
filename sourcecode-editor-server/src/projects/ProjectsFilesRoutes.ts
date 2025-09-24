@@ -14,6 +14,7 @@ import {
   ApiUtilsCompressJson,
   ApiUtilsDecompress,
 } from "../utils-std-ts/ApiUtils";
+import { ProjectsSyncStartProject } from "./ProjectsSync";
 
 export class ProjectsFilesRoutes {
   //
@@ -81,6 +82,11 @@ export class ProjectsFilesRoutes {
         await ApiUtilsDecompress(req.body.content)
       )
         .then(() => {
+          return ProjectsSyncStartProject(OTelRequestSpan(req), project, [
+            "filesUpdateStatus",
+          ]);
+        })
+        .then(() => {
           res.status(200).send({ success: true });
         })
         .catch(() => {
@@ -109,6 +115,9 @@ export class ProjectsFilesRoutes {
           req.body.parentPath,
           req.body.fileName
         );
+        await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
+          "filesUpdateStatus",
+        ]);
         res.status(200).send({ success: true });
       } catch {
         res.status(500).send({ error: "File Create Failed" });
@@ -135,6 +144,9 @@ export class ProjectsFilesRoutes {
           project,
           req.body.filePath
         );
+        await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
+          "filesUpdateStatus",
+        ]);
         res.status(200).send({ success: true });
       } catch {
         res.status(500).send({ error: "File Delete Failed" });
@@ -162,6 +174,9 @@ export class ProjectsFilesRoutes {
           req.body.oldPath,
           req.body.newPath
         );
+        await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
+          "filesUpdateStatus",
+        ]);
         res.status(200).send({ success: true });
       } catch {
         res.status(500).send({ error: "File Rename Failed" });

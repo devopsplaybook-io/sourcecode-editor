@@ -23,13 +23,13 @@ export async function ProjectsSyncInit(
   const span = OTelTracer().startSpan("ProjectsSyncInit", context);
   config = configIn;
   setInterval(() => {
-    ProjectsSyncStart(span);
+    ProjectsSyncStart();
   }, config.PROJECTS_SYNC_FREQUENCY);
-  ProjectsSyncStart(span);
+  ProjectsSyncStart();
   span.end();
 }
 
-export async function ProjectsSyncStart(context: Span): Promise<void> {
+export async function ProjectsSyncStart(context: Span = null): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncStart", context);
 
   const projects = await ProjectsDataList(span);
@@ -50,7 +50,13 @@ export async function ProjectsSyncStart(context: Span): Promise<void> {
 
 export async function ProjectsSyncStartProject(
   context: Span,
-  project: Project
+  project: Project,
+  parts: string[] = [
+    "branches",
+    "currentBranch",
+    "filesUpdateStatus",
+    "branchStatus",
+  ]
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncStartProject", context);
   logger.info(
@@ -58,23 +64,36 @@ export async function ProjectsSyncStartProject(
     span
   );
   try {
-    const projectStatus = new ProjectStatus({ projectId: project.projectId });
+    let projectStatus: ProjectStatus;
 
-    projectStatus.branches = await GitListBranches(span, project);
-
-    projectStatus.currentBranch = await GitGetBranchCurrent(span, project);
     const idx = projectStatuses.findIndex(
-      (ps) => ps.projectId === projectStatus.projectId
+      (ps) => ps.projectId === project.projectId
     );
     if (idx !== -1) {
-      projectStatuses[idx] = projectStatus;
+      projectStatus = projectStatuses[idx];
     } else {
+      projectStatus = new ProjectStatus({ projectId: project.projectId });
       projectStatuses.push(projectStatus);
     }
 
-    projectStatus.filesUpdateStatus = await GitListModifiedFiles(span, project);
+    if (parts.includes("branches")) {
+      projectStatus.branches = await GitListBranches(span, project);
+    }
 
-    projectStatus.branchStatus = await GitGetBranchStatus(span, project);
+    if (parts.includes("currentBranch")) {
+      projectStatus.currentBranch = await GitGetBranchCurrent(span, project);
+    }
+
+    if (parts.includes("filesUpdateStatus")) {
+      projectStatus.filesUpdateStatus = await GitListModifiedFiles(
+        span,
+        project
+      );
+    }
+
+    if (parts.includes("branchStatus")) {
+      projectStatus.branchStatus = await GitGetBranchStatus(span, project);
+    }
   } catch (err) {
     logger.error(
       `Project sync failed for project: ${project.projectId}`,

@@ -53,7 +53,7 @@ export class ProjectsRoutes {
       res.status(201).send({});
     });
 
-    fastify.post<{}>("/sync", async (req, res) => {
+    fastify.post("/sync", async (req, res) => {
       if (!(await AuthGetUserSession(req)).isAuthenticated) {
         return res.status(403).send({ error: "Access Denied" });
       }
@@ -82,7 +82,7 @@ export class ProjectsRoutes {
       project.name = req.body.name || project.name;
       project.info = req.body.info || project.info;
       await ProjectsDataUpdate(OTelRequestSpan(req), project);
-      ProjectsSyncStartProject(null, project).catch((err) => {
+      ProjectsSyncStartProject(OTelRequestSpan(req), project).catch((err) => {
         logger.error(
           `Error Triggering Project Sync`,
           err,
