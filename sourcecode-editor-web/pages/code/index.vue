@@ -17,6 +17,7 @@
     <div v-if="selectedProjectId" id="code-layout-files-tree">
       <FileTree
         :files="files"
+        :projectId="selectedProjectId"
         @file-selected="onFileSelected"
         @rename-file="onRenameFile"
         @delete-file="onDeleteFile"
@@ -92,13 +93,14 @@ export default {
           await AuthService.getAuthHeader()
         )
         .then(async (res) => {
-          // If the API does not return a tree, you may need to convert the flat list to a tree here.
           this.files = res.data.files;
         })
         .catch(handleError);
     },
     onProjectChange() {
       CodePreferencesService.setLastProjectId(this.selectedProjectId);
+      this.fileActive = null;
+      this.fileContent = "";
       this.fetchFiles();
     },
     async onFileSelected(file) {

@@ -41,6 +41,8 @@
 </template>
 
 <script>
+import { CodePreferencesService } from "~~/services/CodePreferencesService";
+
 export default {
   name: "FileTreeNode",
   emits: ["file-selected", "delete-file", "rename-file", "create-file"],
@@ -49,18 +51,50 @@ export default {
       type: Object,
       required: true,
     },
+    projectId: {
+      type: String,
+      required: false,
+    },
   },
   data() {
     return {
-      isExpanded: this.node.name === "/" ? true : false,
+      isExpanded: this.node.name === "/" ? true : this.isFolderExpanded(),
     };
   },
   methods: {
+    getStorageKey() {
+      return `code_preferences_expanded_folders_${this.projectId}`;
+    },
+    getExpandedFolders() {
+      const key = this.getStorageKey();
+      const stored = CodePreferencesService.get(key);
+      return stored ? JSON.parse(stored) : [];
+    },
+    setExpandedFolders(folders) {
+      const key = this.getStorageKey();
+      CodePreferencesService.set(key, JSON.stringify(folders));
+    },
+    isFolderExpanded() {
+      if (this.node.isFile) return false;
+      const expanded = this.getExpandedFolders();
+      return expanded.includes(this.node.path);
+    },
+    updateExpandedFolders(expand) {
+      if (this.node.isFile) return;
+      let expanded = this.getExpandedFolders();
+      if (expand) {
+        if (!expanded.includes(this.node.path)) expanded.push(this.node.path);
+      } else {
+        expanded = expanded.filter((p) => p !== this.node.path);
+      }
+      this.setExpandedFolders(expanded);
+    },
     handleClick() {
       if (this.node.isFile) {
         this.$emit("file-selected", this.node.path);
       } else if (this.node.name !== "/") {
         this.isExpanded = !this.isExpanded;
+        this.updateExpandedFolders(this.isExpanded);
       }
     },
     emitRename() {
@@ -86,40 +120,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-.tree-node {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.node-content {
-  display: grid;
-  align-items: center;
-  padding: 2px 0;
-  cursor: pointer;
-  user-select: none;
-  grid-template-columns: auto 1fr auto;
-}
-
-.folder-icon,
-.file-icon {
-  margin-right: 0.3rem;
-  font-size: 1rem;
-}
-
-.node-name {
-  font-size: 1rem;
-}
-
-.children {
-  list-style: none;
-  padding-left: 1em;
-  margin: 0;
-}
-.node-actions i {
-  margin-left: 0.5rem;
-  cursor: pointer;
-}
-</style>

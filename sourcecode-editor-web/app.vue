@@ -79,6 +79,50 @@ main {
   margin-right: 0.5rem;
 }
 
+/* Files */
+
+.file-tree {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.tree-node {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.node-content {
+  display: grid;
+  align-items: center;
+  padding: 2px 0;
+  cursor: pointer;
+  user-select: none;
+  grid-template-columns: auto 1fr auto;
+}
+
+.folder-icon,
+.file-icon {
+  margin-right: 0.3rem;
+  font-size: 1rem;
+}
+
+.node-name {
+  font-size: 1rem;
+  border-bottom: 1px solid #66666666;
+}
+
+.children {
+  list-style: none;
+  padding-left: 1em;
+  margin: 0;
+}
+.node-actions i {
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
 /* Aninations */
 
 .fade-in-slow {

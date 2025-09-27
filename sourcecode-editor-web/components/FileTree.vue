@@ -2,6 +2,7 @@
   <ul class="file-tree">
     <FileTreeNode
       :node="rootNode"
+      :projectId="projectId"
       @file-selected="onFileSelected"
       @delete-file="$emit('delete-file', $event)"
       @rename-file="$emit('rename-file', $event)"
@@ -19,6 +20,10 @@ export default {
   props: {
     files: {
       type: Array,
+      required: true,
+    },
+    projectId: {
+      type: String,
       required: true,
     },
   },
@@ -82,11 +87,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-.file-tree {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
-}
-</style>
