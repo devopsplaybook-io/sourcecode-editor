@@ -21,6 +21,7 @@ import { GitInit } from "./git/Git";
 import { ProjectsSyncInit } from "./projects/ProjectsSync";
 import { ProjectsFilesRoutes } from "./projects/ProjectsFilesRoutes";
 import { FilesInit } from "./files/Files";
+import { ProjectsLLMRoutes } from "./projects/ProjectsLLMRoutes";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -81,6 +82,9 @@ Promise.resolve().then(async () => {
   });
   fastify.register(new ProjectsFilesRoutes().getRoutes, {
     prefix: "/api/projects/:projectId/files",
+  });
+  fastify.register(new ProjectsLLMRoutes().getRoutes, {
+    prefix: "/api/projects/:projectId/llm",
   });
   fastify.register(new SSHRoutes().getRoutes, {
     prefix: "/api/ssh",

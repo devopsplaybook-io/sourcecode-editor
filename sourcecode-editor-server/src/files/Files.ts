@@ -35,13 +35,12 @@ export async function FilesProjectDelete(
 }
 import { Span } from "@opentelemetry/sdk-trace-base";
 import { Project } from "../model/Project";
-import { OTelLogger, OTelTracer } from "../OTelContext";
+import { OTelTracer } from "../OTelContext";
 import { Config } from "../Config";
 import { ensureDir } from "fs-extra";
 import path from "path";
 import fs from "fs/promises";
 
-const logger = OTelLogger().createModuleLogger("Files");
 let config: Config;
 let projectParentFolder = "";
 

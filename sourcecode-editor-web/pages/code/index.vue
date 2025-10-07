@@ -25,12 +25,23 @@
       />
     </div>
     <div id="code-layout-files-editor">
+      <a href="#" v-if="fileActive" @click="showLLMDialog = true"
+        ><i class="bi bi-robot"> LLM </i></a
+      >
       <textarea
         v-model="fileContent"
         id="code-editor-textarea"
         spellcheck="false"
         @input="onFileContentInput"
       ></textarea>
+      <LLMDialog
+        v-if="showLLMDialog"
+        :file="fileActive"
+        :fileName="fileActive.name || fileActive.path"
+        :projectId="selectedProjectId"
+        @codeUpdated="codeUpdated"
+        @close="showLLMDialog = false"
+      />
     </div>
   </div>
 </template>
@@ -57,6 +68,7 @@ export default {
       selectedProjectId: null,
       fileContent: "",
       fileActive: null,
+      showLLMDialog: false,
     };
   },
   async created() {
@@ -181,6 +193,11 @@ export default {
         )
         .catch(handleError);
     },
+    async codeUpdated(content) {
+      this.showLLMDialog = false;
+      this.fileContent = content;
+      this.onFileContentChange(content);
+    },
   },
 };
 </script>
@@ -219,5 +236,11 @@ select {
   font-size: 1em;
   padding: 1em;
   box-sizing: border-box;
+}
+#code-layout-files-editor a {
+  margin: 0.4rem;
+  text-align: right;
+  cursor: pointer;
+  text-decoration: none;
 }
 </style>
