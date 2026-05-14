@@ -59,6 +59,8 @@ import { EventBus, EventTypes, handleError } from "~~/services/EventBus";
 import { UtilsDecompressData, UtilsCompressData } from "~~/services/Utils";
 import { CodePreferencesService } from "~~/services/CodePreferencesService";
 import debounce from "lodash/debounce";
+import { RepositoryEventsService } from "~~/services/RepositoryEventsService";
+import { RepositoryEventTypes } from "~~/services/RepositoryEventTypes";
 
 export default {
   components: { FileTree },
@@ -69,6 +71,7 @@ export default {
       fileContent: "",
       fileActive: null,
       showLLMDialog: false,
+      unbindFns: [],
     };
   },
   async created() {
@@ -79,17 +82,44 @@ export default {
     this.loadLastSelectedProject();
     this.debouncedOnFileContentChange = debounce(
       this.onFileContentChange,
-      1000
+      1000,
     );
+    this.bindRepositoryEvents();
+  },
+  beforeUnmount() {
+    if (this.unbindFns) {
+      this.unbindFns.forEach((fn) => fn());
+      this.unbindFns = [];
+    }
   },
   methods: {
+    bindRepositoryEvents() {
+      // Refresh the file tree only when an event targets the active project.
+      // Mirrors the "Conditional UI Refresh Based on Sync Event Relevance" rule:
+      // ignore noise from unrelated repositories.
+      const fileEvents = [
+        RepositoryEventTypes.FILE_CREATED,
+        RepositoryEventTypes.FILE_DELETED,
+        RepositoryEventTypes.FILE_RENAMED,
+      ];
+      this.unbindFns = fileEvents.map((eventType) =>
+        RepositoryEventsService.on(eventType, (event) => {
+          if (
+            this.selectedProjectId &&
+            event.repository === this.selectedProjectId
+          ) {
+            this.fetchFiles();
+          }
+        }),
+      );
+    },
     loadLastSelectedProject() {
       const lastProjectId = CodePreferencesService.getLastProjectId();
       if (
         lastProjectId &&
         CodePreferencesService.isValidProject(
           lastProjectId,
-          GitProjectsStore().projects
+          GitProjectsStore().projects,
         )
       ) {
         this.selectedProjectId = lastProjectId;
@@ -102,7 +132,7 @@ export default {
           `${(await Config.get()).SERVER_URL}/projects/${
             this.selectedProjectId
           }/files`,
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
         .then(async (res) => {
           this.files = res.data.files;
@@ -124,11 +154,11 @@ export default {
             this.selectedProjectId
           }/files/content/retrieval`,
           { file },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
         .then(async (res) => {
           this.fileContent = JSON.parse(
-            await UtilsDecompressData(res.data.file)
+            await UtilsDecompressData(res.data.file),
           ).content;
         })
         .catch(handleError);
@@ -140,9 +170,9 @@ export default {
             this.selectedProjectId
           }/files/rename`,
           { oldPath, newPath },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         );
-        this.fetchFiles();
+        // file.renamed event will refresh the tree.
       } catch (e) {
         handleError(e);
       }
@@ -154,9 +184,9 @@ export default {
             this.selectedProjectId
           }/files/delete`,
           { filePath },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         );
-        this.fetchFiles();
+        // file.deleted event will refresh the tree.
         if (this.fileActive && this.fileActive.path === filePath) {
           this.fileActive = null;
           this.fileContent = "";
@@ -172,9 +202,9 @@ export default {
             this.selectedProjectId
           }/files/create`,
           { parentPath, fileName },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         );
-        this.fetchFiles();
+        // file.created event will refresh the tree.
       } catch (e) {
         handleError(e);
       }
@@ -189,7 +219,7 @@ export default {
             this.selectedProjectId
           }/files/content/update`,
           { file: this.fileActive, content: await UtilsCompressData(content) },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
         .catch(handleError);
     },

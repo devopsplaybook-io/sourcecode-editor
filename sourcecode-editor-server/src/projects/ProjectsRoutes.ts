@@ -15,6 +15,8 @@ import {
 } from "./ProjectsSync";
 import { OTelLogger } from "../OTelContext";
 import { GitClone } from "../git/Git";
+import { EventBusEmit } from "../events/EventBus";
+import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 
 const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
 export class ProjectsRoutes {
@@ -47,6 +49,11 @@ export class ProjectsRoutes {
       project.name = req.body.name;
       project.info = req.body.info || "";
       await ProjectsDataAdd(OTelRequestSpan(req), project);
+      EventBusEmit({
+        repository: project.projectId,
+        eventType: RepositoryEventTypes.PROJECT_CREATED,
+        eventDetail: { project },
+      });
       await GitClone(OTelRequestSpan(req), project);
       await ProjectsSyncStartProject(OTelRequestSpan(req), project);
 
@@ -74,7 +81,7 @@ export class ProjectsRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -82,11 +89,16 @@ export class ProjectsRoutes {
       project.name = req.body.name || project.name;
       project.info = req.body.info || project.info;
       await ProjectsDataUpdate(OTelRequestSpan(req), project);
+      EventBusEmit({
+        repository: project.projectId,
+        eventType: RepositoryEventTypes.PROJECT_UPDATED,
+        eventDetail: { project },
+      });
       ProjectsSyncStartProject(OTelRequestSpan(req), project).catch((err) => {
         logger.error(
           `Error Triggering Project Sync`,
           err,
-          OTelRequestSpan(req)
+          OTelRequestSpan(req),
         );
       });
       res.status(200).send({});
@@ -100,7 +112,7 @@ export class ProjectsRoutes {
         }
         const status = await ProjectsSyncGetStatusProject(
           OTelRequestSpan(req),
-          req.params.projectId
+          req.params.projectId,
         );
         if (!status) {
           return res.status(401).send({ error: "Invalid Request" });
@@ -108,7 +120,7 @@ export class ProjectsRoutes {
         res.status(200).send({
           status,
         });
-      }
+      },
     );
 
     fastify.get<{ Params: { projectId: string } }>(
@@ -119,13 +131,13 @@ export class ProjectsRoutes {
         }
         const project = await ProjectsDataGet(
           OTelRequestSpan(req),
-          req.params.projectId
+          req.params.projectId,
         );
         if (!project) {
           return res.status(404).send({ error: "Project Not Found" });
         }
         res.status(200).send(project);
-      }
+      },
     );
   }
 }

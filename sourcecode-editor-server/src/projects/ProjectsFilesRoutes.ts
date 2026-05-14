@@ -15,6 +15,8 @@ import {
   ApiUtilsDecompress,
 } from "../utils-std-ts/ApiUtils";
 import { ProjectsSyncStartProject } from "./ProjectsSync";
+import { EventBusEmit } from "../events/EventBus";
+import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 
 export class ProjectsFilesRoutes {
   //
@@ -26,7 +28,7 @@ export class ProjectsFilesRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -45,7 +47,7 @@ export class ProjectsFilesRoutes {
         }
         const project = await ProjectsDataGet(
           OTelRequestSpan(req),
-          req.params.projectId
+          req.params.projectId,
         );
         if (!project) {
           return res.status(404).send({ error: "Project Not Found" });
@@ -53,12 +55,12 @@ export class ProjectsFilesRoutes {
         const content = await FilesProjectGet(
           OTelRequestSpan(req),
           project,
-          req.body.file
+          req.body.file,
         );
         res.status(200).send({
           file: await ApiUtilsCompressJson({ content }),
         });
-      }
+      },
     );
 
     fastify.post<{
@@ -70,7 +72,7 @@ export class ProjectsFilesRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -79,9 +81,14 @@ export class ProjectsFilesRoutes {
         OTelRequestSpan(req),
         project,
         req.body.file,
-        await ApiUtilsDecompress(req.body.content)
+        await ApiUtilsDecompress(req.body.content),
       )
         .then(() => {
+          EventBusEmit({
+            repository: project.projectId,
+            eventType: RepositoryEventTypes.FILE_UPDATED,
+            eventDetail: { path: req.body.file },
+          });
           return ProjectsSyncStartProject(OTelRequestSpan(req), project, [
             "filesUpdateStatus",
           ]);
@@ -103,7 +110,7 @@ export class ProjectsFilesRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -113,8 +120,16 @@ export class ProjectsFilesRoutes {
           OTelRequestSpan(req),
           project,
           req.body.parentPath,
-          req.body.fileName
+          req.body.fileName,
         );
+        EventBusEmit({
+          repository: project.projectId,
+          eventType: RepositoryEventTypes.FILE_CREATED,
+          eventDetail: {
+            parentPath: req.body.parentPath,
+            fileName: req.body.fileName,
+          },
+        });
         await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
           "filesUpdateStatus",
         ]);
@@ -133,7 +148,7 @@ export class ProjectsFilesRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -142,8 +157,13 @@ export class ProjectsFilesRoutes {
         await FilesProjectDelete(
           OTelRequestSpan(req),
           project,
-          req.body.filePath
+          req.body.filePath,
         );
+        EventBusEmit({
+          repository: project.projectId,
+          eventType: RepositoryEventTypes.FILE_DELETED,
+          eventDetail: { path: req.body.filePath },
+        });
         await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
           "filesUpdateStatus",
         ]);
@@ -162,7 +182,7 @@ export class ProjectsFilesRoutes {
       }
       const project = await ProjectsDataGet(
         OTelRequestSpan(req),
-        req.params.projectId
+        req.params.projectId,
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
@@ -172,8 +192,16 @@ export class ProjectsFilesRoutes {
           OTelRequestSpan(req),
           project,
           req.body.oldPath,
-          req.body.newPath
+          req.body.newPath,
         );
+        EventBusEmit({
+          repository: project.projectId,
+          eventType: RepositoryEventTypes.FILE_RENAMED,
+          eventDetail: {
+            oldPath: req.body.oldPath,
+            newPath: req.body.newPath,
+          },
+        });
         await ProjectsSyncStartProject(OTelRequestSpan(req), project, [
           "filesUpdateStatus",
         ]);

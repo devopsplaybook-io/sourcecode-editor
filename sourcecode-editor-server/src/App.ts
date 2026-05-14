@@ -22,6 +22,7 @@ import { ProjectsSyncInit } from "./projects/ProjectsSync";
 import { ProjectsFilesRoutes } from "./projects/ProjectsFilesRoutes";
 import { FilesInit } from "./files/Files";
 import { ProjectsLLMRoutes } from "./projects/ProjectsLLMRoutes";
+import { RepositoryEventsWebSocket } from "./events/WebSocketRoutes";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -66,6 +67,17 @@ Promise.resolve().then(async () => {
   }
   /* eslint-disable-next-line */
   fastify.register(require("@fastify/multipart"));
+  /* eslint-disable-next-line */
+  fastify.register(require("@fastify/websocket"));
+
+  // Generic event broadcast WebSocket.
+  const repositoryEventsWS = new RepositoryEventsWebSocket();
+  fastify.register(
+    async (instance) => {
+      repositoryEventsWS.registerRoutes(instance, config);
+    },
+    { prefix: "/api/events" },
+  );
 
   StandardTracerFastifyRegisterHooks(fastify, OTelTracer(), OTelLogger(), {
     ignoreList: ["GET-/api/status"],

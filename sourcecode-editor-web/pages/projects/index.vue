@@ -9,7 +9,16 @@
       :key="project.id"
       class="project-card"
     >
-      <header>{{ project.name }}</header>
+      <header>
+        {{ project.name }}
+        <span
+          v-if="repositoryEventsStore.isBusy(project.projectId)"
+          class="project-busy"
+          :title="repositoryEventsStore.activeOperation(project.projectId)"
+        >
+          <i class="bi bi-arrow-repeat spin"></i>
+        </span>
+      </header>
       <div v-if="project.status" class="action-controls">
         <select
           class="branch-select"
@@ -87,6 +96,8 @@
 
 <script setup>
 const gitProjectsStore = GitProjectsStore();
+const repositoryEventsStore = RepositoryEventsStore();
+repositoryEventsStore.init();
 </script>
 
 <script>
@@ -118,14 +129,15 @@ export default {
             project.projectId
           }/operations/clone`,
           {},
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
-        .then(async (res) => {
+        .then(async () => {
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Repository Cloned",
           });
-          GitProjectsStore().fetch();
+          // No imperative refetch: server broadcasts git.clone.completed +
+          // git.status.changed; GitProjectsStore subscribes to those.
         })
         .catch(handleError);
     },
@@ -136,14 +148,14 @@ export default {
             project.projectId
           }/operations/pull`,
           {},
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
-        .then(async (res) => {
+        .then(async () => {
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Pulled",
           });
-          GitProjectsStore().fetch();
+          // git.status.changed event will refresh the store.
         })
         .catch(handleError);
     },
@@ -158,7 +170,7 @@ export default {
             project.projectId
           }/operations/push`,
           {},
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
         .then(async (res) => {
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
@@ -169,7 +181,8 @@ export default {
         .catch(handleError);
     },
     onCloseDialog() {
-      GitProjectsStore().fetch();
+      // Dialogs that mutate state (commit, branch create) trigger server-side
+      // events; no manual refetch is needed.
       this.selectedProject = null;
       this.showCommitDialog = false;
       this.showCreateBranchDialog = false;
@@ -189,10 +202,10 @@ export default {
             project.projectId
           }/operations/checkout`,
           { branch },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
-        .then(async (res) => {
-          GitProjectsStore().fetch();
+        .then(async () => {
+          // git.status.changed will refresh the store with the new branch.
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Checkout Branch: " + branch,
@@ -222,7 +235,7 @@ export default {
       }
       if (
         !confirm(
-          `Are you sure you want to delete branch "${branch}" for project "${project.name}"?`
+          `Are you sure you want to delete branch "${branch}" for project "${project.name}"?`,
         )
       )
         return;
@@ -232,14 +245,14 @@ export default {
             project.projectId
           }/operations/branch/delete`,
           { branch },
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         )
         .then(() => {
           EventBus.emit(EventTypes.ALERT_MESSAGE, {
             type: "info",
             text: "Branch deleted: " + branch,
           });
-          this.refresh();
+          // git.branch.deleted + git.status.changed will refresh the store.
         })
         .catch(handleError);
     },
@@ -284,5 +297,19 @@ export default {
 #object-list span,
 #object-list p {
   font-size: 0.9em;
+}
+.project-busy {
+  margin-left: 0.5rem;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+.project-busy .spin {
+  display: inline-block;
+  animation: project-busy-spin 1s linear infinite;
+}
+@keyframes project-busy-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -4,6 +4,8 @@ http:
       service: service-web
       rule: PathPrefix(`/`)
     server:
+      # The /api/ prefix also matches the WebSocket endpoint /api/events/ws.
+      # Traefik upgrades HTTP/1.1 connections automatically; no extra rule needed.
       service: service-server
       rule: PathPrefix(`/api/`)
 

@@ -11,6 +11,8 @@ import { Project } from "../model/Project";
 import { ProjectStatus } from "../model/ProjectStatus";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import { ProjectsDataList } from "./ProjectsData";
+import { EventBusEmit } from "../events/EventBus";
+import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 
 const logger = OTelLogger().createModuleLogger("ProjectsSync");
 let config: Config;
@@ -18,7 +20,7 @@ const projectStatuses: ProjectStatus[] = [];
 
 export async function ProjectsSyncInit(
   context: Span,
-  configIn: Config
+  configIn: Config,
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncInit", context);
   config = configIn;
@@ -56,18 +58,18 @@ export async function ProjectsSyncStartProject(
     "currentBranch",
     "filesUpdateStatus",
     "branchStatus",
-  ]
+  ],
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsSyncStartProject", context);
   logger.info(
     `Starting sync for project: ${project.projectId} ${project.name}`,
-    span
+    span,
   );
   try {
     let projectStatus: ProjectStatus;
 
     const idx = projectStatuses.findIndex(
-      (ps) => ps.projectId === project.projectId
+      (ps) => ps.projectId === project.projectId,
     );
     if (idx !== -1) {
       projectStatus = projectStatuses[idx];
@@ -87,18 +89,25 @@ export async function ProjectsSyncStartProject(
     if (parts.includes("filesUpdateStatus")) {
       projectStatus.filesUpdateStatus = await GitListModifiedFiles(
         span,
-        project
+        project,
       );
     }
 
     if (parts.includes("branchStatus")) {
       projectStatus.branchStatus = await GitGetBranchStatus(span, project);
     }
+
+    // Emit a single fat status event so clients refresh without an HTTP roundtrip.
+    EventBusEmit({
+      repository: project.projectId,
+      eventType: RepositoryEventTypes.GIT_STATUS_CHANGED,
+      eventDetail: { status: projectStatus },
+    });
   } catch (err) {
     logger.error(
       `Project sync failed for project: ${project.projectId}`,
       err,
-      span
+      span,
     );
     span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
   }
@@ -107,7 +116,7 @@ export async function ProjectsSyncStartProject(
 
 export async function ProjectsSyncGetStatusProject(
   context: Span,
-  projectId: string
+  projectId: string,
 ): Promise<ProjectStatus | null> {
   const span = OTelTracer().startSpan("ProjectsSyncGetStatus", context);
   const projectStatus =
