@@ -211,6 +211,13 @@ export default {
               (f) => f.path !== file.path,
             );
         }
+        // If no more pending changes, dismiss the commit dialog.
+        if (
+          !this.project.status.filesUpdateStatus ||
+          this.project.status.filesUpdateStatus.length === 0
+        ) {
+          this.$emit("onClose", {});
+        }
       } catch (e) {
         handleError(e);
       }

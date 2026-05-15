@@ -193,11 +193,13 @@ export async function GitCommit(
     );
     if (files.length > 0) {
       const filesArg = files.map((f) => `"${f}"`).join(" ");
+      // Use `git add -A -- <files>` so that deletions are also staged.
+      // Plain `git add <file>` fails when the file no longer exists on disk.
       await SystemCommandExecute(
         span,
         `${await GitEnv(span)} && cd ${projectParentFolder}/${
           project.projectId
-        } && git add ${filesArg}`,
+        } && git add -A -- ${filesArg}`,
       );
     }
     await SystemCommandExecute(
