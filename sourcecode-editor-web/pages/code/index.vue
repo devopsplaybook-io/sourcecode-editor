@@ -39,6 +39,7 @@
         :file="fileActive"
         :fileName="fileActive.name || fileActive.path"
         :projectId="selectedProjectId"
+        :originalContent="fileContent"
         @codeUpdated="codeUpdated"
         @close="showLLMDialog = false"
       />

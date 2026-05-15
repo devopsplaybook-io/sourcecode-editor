@@ -17,6 +17,7 @@ import {
 import { ProjectsSyncStartProject } from "./ProjectsSync";
 import { EventBusEmit } from "../events/EventBus";
 import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
+import { GitGetFileFromHead } from "../git/Git";
 
 export class ProjectsFilesRoutes {
   //
@@ -171,6 +172,48 @@ export class ProjectsFilesRoutes {
       } catch {
         res.status(500).send({ error: "File Delete Failed" });
       }
+    });
+
+    fastify.post<{
+      Params: { projectId: string };
+      Body: { file: string };
+    }>("/diff", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(404).send({ error: "Project Not Found" });
+      }
+      let originalContent = "";
+      let currentContent = "";
+      try {
+        originalContent = await GitGetFileFromHead(
+          OTelRequestSpan(req),
+          project,
+          req.body.file,
+        );
+      } catch {
+        originalContent = "";
+      }
+      try {
+        currentContent = await FilesProjectGet(
+          OTelRequestSpan(req),
+          project,
+          req.body.file,
+        );
+      } catch {
+        currentContent = "";
+      }
+      res.status(200).send({
+        diff: await ApiUtilsCompressJson({
+          originalContent,
+          currentContent,
+        }),
+      });
     });
 
     fastify.post<{

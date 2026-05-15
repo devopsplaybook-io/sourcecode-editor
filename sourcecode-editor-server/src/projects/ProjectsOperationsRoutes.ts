@@ -10,6 +10,7 @@ import {
   GitReset,
   GitCreateBranch,
   GitDeleteBranch,
+  GitDiscardFile,
 } from "../git/Git";
 import { OTelLogger } from "../OTelContext";
 import { AuthGetUserSession } from "../users/Auth";
@@ -168,6 +169,38 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Commit Failed", err, OTelRequestSpan(req));
+          return res.status(500).send({ error: "Operation Failed" });
+        });
+    });
+
+    fastify.post<{
+      Params: {
+        projectId: string;
+      };
+      Body: { file: string };
+    }>("/discard", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      RunWithEvents(
+        OTelRequestSpan(req),
+        project,
+        "git.discard",
+        async () => {
+          await GitDiscardFile(OTelRequestSpan(req), project, req.body.file);
+        },
+        { completedDetail: { file: req.body.file } },
+      )
+        .then(() => res.status(201).send({}))
+        .catch((err) => {
+          logger.error("Git Discard Failed", err, OTelRequestSpan(req));
           return res.status(500).send({ error: "Operation Failed" });
         });
     });
