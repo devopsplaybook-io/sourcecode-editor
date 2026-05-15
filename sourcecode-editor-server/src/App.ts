@@ -1,6 +1,6 @@
 import { StandardMeter, StandardTracer } from "@devopsplaybook.io/otel-utils";
 import { StandardTracerFastifyRegisterHooks } from "@devopsplaybook.io/otel-utils-fastify";
-import Fastify from "fastify";
+import Fastify, { FastifyInstance } from "fastify";
 import { watchFile } from "fs-extra";
 import * as path from "path";
 import { Config } from "./Config";
@@ -95,9 +95,13 @@ Promise.resolve().then(async () => {
   fastify.register(new ProjectsFilesRoutes().getRoutes, {
     prefix: "/api/projects/:projectId/files",
   });
-  fastify.register(new ProjectsLLMRoutes().getRoutes, {
-    prefix: "/api/projects/:projectId/llm",
-  });
+  const projectsLLMRoutes = new ProjectsLLMRoutes();
+  fastify.register(
+    async (instance: FastifyInstance) => {
+      await projectsLLMRoutes.getRoutes(instance, config);
+    },
+    { prefix: "/api/projects/:projectId/llm" },
+  );
   fastify.register(new SSHRoutes().getRoutes, {
     prefix: "/api/ssh",
   });
