@@ -383,16 +383,6 @@ export default {
   gap: 0.5rem;
   padding-left: 1.5rem;
 }
-@media (min-width: 768px) {
-  .org-repos-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1200px) {
-  .org-repos-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
 
 .repo-card {
   margin: 0;
