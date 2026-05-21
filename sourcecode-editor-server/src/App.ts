@@ -23,6 +23,7 @@ import { ProjectsFilesRoutes } from "./projects/ProjectsFilesRoutes";
 import { FilesInit } from "./files/Files";
 import { ProjectsLLMRoutes } from "./projects/ProjectsLLMRoutes";
 import { RepositoryEventsWebSocket } from "./events/WebSocketRoutes";
+import { GitHubRoutes } from "./github/GitHubRoutes";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -105,6 +106,12 @@ Promise.resolve().then(async () => {
   fastify.register(new SSHRoutes().getRoutes, {
     prefix: "/api/ssh",
   });
+  fastify.register(
+    async (instance: FastifyInstance) => {
+      await new GitHubRoutes().getRoutes(instance, config);
+    },
+    { prefix: "/api/github" },
+  );
   fastify.get("/api/status", async () => {
     return { started: true };
   });

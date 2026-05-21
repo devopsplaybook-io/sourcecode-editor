@@ -45,6 +45,11 @@ export const RepositoryEventTypes = {
   GIT_BRANCH_DELETED: "git.branch.deleted",
   GIT_BRANCH_FAILED: "git.branch.failed",
 
+  // GitHub operations
+  GITHUB_CLONE_STARTED: "github.clone.started",
+  GITHUB_CLONE_COMPLETED: "github.clone.completed",
+  GITHUB_CLONE_FAILED: "github.clone.failed",
+
   // Status snapshot (fat payload)
   GIT_STATUS_CHANGED: "git.status.changed",
 

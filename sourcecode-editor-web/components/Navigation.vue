@@ -20,6 +20,13 @@
           ><i class="bi bi-journals"></i
         ></NuxtLink>
       </li>
+      <li v-if="authenticationStore.isAuthenticated && gitHubStore.enabled">
+        <NuxtLink
+          to="/github"
+          :class="activeRoute == '/github' ? 'active' : 'inactive'"
+          ><i class="bi bi-github"></i
+        ></NuxtLink>
+      </li>
       <li>
         <NuxtLink
           to="/users"
@@ -35,6 +42,10 @@
 import { AuthService } from "~~/services/AuthService";
 import { PreferencesService } from "~/services/PreferencesService";
 const authenticationStore = AuthenticationStore();
+const gitHubStore = GitHubStore();
+
+// Initialize GitHub store on mount
+gitHubStore.init();
 </script>
 
 <script>
@@ -61,7 +72,7 @@ export default {
           .post(
             `${(await Config.get()).SERVER_URL}/users/session`,
             {},
-            await AuthService.getAuthHeader()
+            await AuthService.getAuthHeader(),
           )
           .then((res) => {
             AuthService.saveToken(res.data.token);
