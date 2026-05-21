@@ -11,12 +11,27 @@
     >
       <header>
         {{ project.name }}
-        <span
-          v-if="repositoryEventsStore.isBusy(project.projectId)"
-          class="project-busy"
-          :title="repositoryEventsStore.activeOperation(project.projectId)"
-        >
-          <i class="bi bi-arrow-repeat spin"></i>
+        <span class="activity-indicators">
+          <span
+            v-if="gitProjectsStore.hasRecentActivity(project)"
+            class="activity-badge"
+            title="Recent GitHub activity"
+          >
+            <i class="bi bi-activity"></i>
+          </span>
+          <span
+            v-if="gitProjectsStore.getLastActivityText(project)"
+            class="activity-time"
+          >
+            {{ gitProjectsStore.getLastActivityText(project) }}
+          </span>
+          <span
+            v-if="repositoryEventsStore.isBusy(project.projectId)"
+            class="project-busy"
+            :title="repositoryEventsStore.activeOperation(project.projectId)"
+          >
+            <i class="bi bi-arrow-repeat spin"></i>
+          </span>
         </span>
       </header>
       <div v-if="project.status" class="action-controls">
@@ -98,6 +113,10 @@
 const gitProjectsStore = GitProjectsStore();
 const repositoryEventsStore = RepositoryEventsStore();
 repositoryEventsStore.init();
+// Re-sort whenever projects change
+gitProjectsStore.$subscribe(() => {
+  gitProjectsStore.sortByActivity();
+});
 </script>
 
 <script>
@@ -311,5 +330,24 @@ export default {
   to {
     transform: rotate(360deg);
   }
+}
+
+.activity-indicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.5rem;
+}
+
+.activity-badge {
+  color: var(--pico-ins-color);
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.activity-time {
+  font-size: 0.75em;
+  opacity: 0.5;
+  white-space: nowrap;
 }
 </style>

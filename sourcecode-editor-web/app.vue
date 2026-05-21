@@ -1,3 +1,16 @@
+<script setup>
+function updateAppHeight() {
+  const height = window.visualViewport?.height ?? window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+}
+
+onMounted(() => {
+  updateAppHeight();
+  window.addEventListener("resize", updateAppHeight);
+  window.visualViewport?.addEventListener("resize", updateAppHeight);
+});
+</script>
+
 <template>
   <div id="page-layout">
     <header>
@@ -21,8 +34,7 @@ export default {};
   grid-template-columns: 1fr;
   grid-template-rows: auto 1fr;
   width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
   overflow: hidden !important;
 }
 

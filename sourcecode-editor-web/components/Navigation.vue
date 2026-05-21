@@ -10,29 +10,33 @@
         <NuxtLink
           to="/code"
           :class="activeRoute == '/code' ? 'active' : 'inactive'"
-          ><i class="bi bi-braces-asterisk"></i
-        ></NuxtLink>
+          ><i class="bi bi-braces-asterisk"></i>
+          <span class="nav-label">Code</span></NuxtLink
+        >
       </li>
       <li v-if="authenticationStore.isAuthenticated">
         <NuxtLink
           to="/projects"
           :class="activeRoute == '/projects' ? 'active' : 'inactive'"
-          ><i class="bi bi-journals"></i
-        ></NuxtLink>
+          ><i class="bi bi-journals"></i>
+          <span class="nav-label">Projects</span></NuxtLink
+        >
       </li>
       <li v-if="authenticationStore.isAuthenticated && gitHubStore.enabled">
         <NuxtLink
           to="/github"
           :class="activeRoute == '/github' ? 'active' : 'inactive'"
-          ><i class="bi bi-github"></i
-        ></NuxtLink>
+          ><i class="bi bi-github"></i>
+          <span class="nav-label">GitHub</span></NuxtLink
+        >
       </li>
       <li>
         <NuxtLink
           to="/users"
           :class="activeRoute == '/users' ? 'active' : 'inactive'"
-          ><i class="bi bi-person-circle"></i
-        ></NuxtLink>
+          ><i class="bi bi-person-circle"></i>
+          <span class="nav-label">Profile</span></NuxtLink
+        >
       </li>
     </ul>
   </nav>
@@ -104,5 +108,12 @@ export default {
 }
 .menu-links .active {
   color: #3cabff;
+}
+
+/* Hide nav labels at <= 1000px, icon-only navigation */
+@media (max-width: 1000px) {
+  .nav-label {
+    display: none;
+  }
 }
 </style>

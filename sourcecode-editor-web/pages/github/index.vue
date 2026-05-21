@@ -487,22 +487,22 @@ export default {
 .pr-status {
   font-size: 0.7rem;
   padding: 0.1em 0.4em;
-  border-radius: 3px;
+  border-radius: var(--pico-border-radius, 4px);
   font-weight: 600;
   text-transform: uppercase;
   flex-shrink: 0;
 }
 .pr-open {
-  background: #2da44e;
-  color: #fff;
+  color: var(--pico-ins-color);
+  background: color-mix(in srgb, var(--pico-ins-color) 15%, transparent);
 }
 .pr-closed {
-  background: #8250df;
-  color: #fff;
+  color: var(--pico-primary);
+  background: color-mix(in srgb, var(--pico-primary) 15%, transparent);
 }
 .pr-draft {
-  background: #656d76;
-  color: #fff;
+  opacity: 0.6;
+  background: color-mix(in srgb, var(--pico-muted-color) 15%, transparent);
 }
 .pr-title {
   overflow: hidden;
@@ -548,16 +548,16 @@ export default {
   flex-shrink: 0;
 }
 .action-pending {
-  color: #d4920b;
+  color: var(--pico-muted-color);
 }
 .action-success {
-  color: #2da44e;
+  color: var(--pico-ins-color);
 }
 .action-failure {
-  color: #cf222e;
+  color: var(--pico-del-color);
 }
 .action-unknown {
-  color: #656d76;
+  opacity: 0.5;
 }
 .action-name {
   overflow: hidden;
@@ -577,24 +577,14 @@ export default {
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: light) {
-  .pr-open {
-    background: #1a7f37;
-  }
-  .pr-closed {
-    background: #6639ba;
-  }
-  .pr-draft {
-    background: #59636e;
-  }
-  .action-success {
-    color: #1a7f37;
-  }
-  .action-failure {
-    color: #cf222e;
-  }
-  .action-pending {
-    color: #9a6700;
-  }
+/* Empty state (design language pattern) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  opacity: 0.6;
+  text-align: center;
 }
 </style>

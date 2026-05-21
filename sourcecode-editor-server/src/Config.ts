@@ -31,6 +31,7 @@ export class Config implements ConfigOTelInterface {
   public LLM_API_URL = "https://api.deepseek.com/chat/completions";
   public LLM_MODEL = "deepseek-chat";
   public GITHUB_TOKEN = "";
+  public GITHUB_SYNC_FREQUENCY = 300_000;
 
   constructor() {
     let version = "1";
@@ -87,6 +88,7 @@ export class Config implements ConfigOTelInterface {
     setIfSet("LLM_API_KEY", false);
     setIfSet("LLM_API_URL");
     setIfSet("LLM_MODEL");
+    setIfSet("GITHUB_SYNC_FREQUENCY");
     setIfSet("GITHUB_TOKEN", false);
   }
 }

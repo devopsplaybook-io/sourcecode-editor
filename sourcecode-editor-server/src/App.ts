@@ -24,6 +24,10 @@ import { FilesInit } from "./files/Files";
 import { ProjectsLLMRoutes } from "./projects/ProjectsLLMRoutes";
 import { RepositoryEventsWebSocket } from "./events/WebSocketRoutes";
 import { GitHubRoutes } from "./github/GitHubRoutes";
+import { GitHubCacheInit } from "./github/GitHubCache";
+import { GitHubCacheRoutes } from "./github/GitHubCacheRoutes";
+import { GitHubMetricsInit } from "./github/GitHubMetrics";
+import { SourceCodeMetricsInit } from "./metrics/SourceCodeMetrics";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -50,6 +54,9 @@ Promise.resolve().then(async () => {
   await SSHInit(span, config);
   await ProjectsSyncInit(span, config);
   await FilesInit(span, config);
+  await GitHubMetricsInit(span, config);
+  await SourceCodeMetricsInit(span);
+  await GitHubCacheInit(span, config);
 
   span.end();
 
@@ -111,6 +118,12 @@ Promise.resolve().then(async () => {
       await new GitHubRoutes().getRoutes(instance, config);
     },
     { prefix: "/api/github" },
+  );
+  fastify.register(
+    async (instance: FastifyInstance) => {
+      await new GitHubCacheRoutes().getRoutes(instance, config);
+    },
+    { prefix: "/api/github/cache" },
   );
   fastify.get("/api/status", async () => {
     return { started: true };

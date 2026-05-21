@@ -51,6 +51,54 @@ export class GitHubService {
     return res.data.enabled;
   }
 
+  static async getCachedRepos(): Promise<GitHubOrganizations> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/repos`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.organizations;
+  }
+
+  static async getCachedPulls(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubPR[]> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/pulls/${owner}/${repo}`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.pulls;
+  }
+
+  static async getCachedActions(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubActionRun[]> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/actions/${owner}/${repo}`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.runs;
+  }
+
+  static async getCacheTimestamp(): Promise<number> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/timestamp`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.lastUpdated;
+  }
+
+  static async getActivity(): Promise<
+    { org: string; repo: string; lastActivity: number }[]
+  > {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/activity`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.activity;
+  }
+
   static async getRepos(): Promise<GitHubOrganizations> {
     const res = await axios.get(
       `${(await Config.get()).SERVER_URL}/github/repos`,

@@ -45,6 +45,7 @@ export const RepositoryEventTypes = {
   GITHUB_CLONE_STARTED: "github.clone.started",
   GITHUB_CLONE_COMPLETED: "github.clone.completed",
   GITHUB_CLONE_FAILED: "github.clone.failed",
+  GITHUB_CACHE_UPDATED: "github.cache.updated",
 
   GIT_STATUS_CHANGED: "git.status.changed",
 

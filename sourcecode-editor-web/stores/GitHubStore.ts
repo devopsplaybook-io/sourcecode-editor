@@ -7,6 +7,8 @@ import {
   type GitHubActionRun,
 } from "~~/services/GitHubService";
 import { handleError, EventBus, EventTypes } from "~~/services/EventBus";
+import { RepositoryEventsService } from "~~/services/RepositoryEventsService";
+import { RepositoryEventTypes } from "~~/services/RepositoryEventTypes";
 
 interface RepoWithDetails {
   repo: GitHubRepo;
@@ -28,6 +30,8 @@ export const GitHubStore = defineStore("GitHubStore", {
     organizations: {} as Record<string, OrgSection>,
     loading: false,
     initialized: false,
+    lastUpdated: 0,
+    eventsBound: false,
   }),
 
   getters: {
@@ -40,6 +44,7 @@ export const GitHubStore = defineStore("GitHubStore", {
     async init(): Promise<void> {
       if (this.initialized) return;
       this.initialized = true;
+      this.bindEvents();
       try {
         this.enabled = await GitHubService.isEnabled();
       } catch {
@@ -47,11 +52,22 @@ export const GitHubStore = defineStore("GitHubStore", {
       }
     },
 
+    bindEvents(): void {
+      if (this.eventsBound) return;
+      this.eventsBound = true;
+      RepositoryEventsService.on(
+        RepositoryEventTypes.GITHUB_CACHE_UPDATED,
+        () => {
+          this.fetchRepos();
+        },
+      );
+    },
+
     async fetchRepos(): Promise<void> {
       if (!this.enabled) return;
       this.loading = true;
       try {
-        const orgs: GitHubOrganizations = await GitHubService.getRepos();
+        const orgs: GitHubOrganizations = await GitHubService.getCachedRepos();
         const orgSections: Record<string, OrgSection> = {};
         for (const [orgName, repos] of Object.entries(orgs)) {
           orgSections[orgName] = {
@@ -67,6 +83,13 @@ export const GitHubStore = defineStore("GitHubStore", {
           };
         }
         this.organizations = orgSections;
+        // Also fetch pulls and actions for all repos in the background
+        for (const [orgName, org] of Object.entries(orgSections)) {
+          for (const entry of org.repos) {
+            this.fetchPulls(orgName, entry.repo.name);
+            this.fetchActions(orgName, entry.repo.name);
+          }
+        }
       } catch (err) {
         handleError(err);
       } finally {
@@ -103,7 +126,7 @@ export const GitHubStore = defineStore("GitHubStore", {
       if (!entry) return;
       entry.pullsLoading = true;
       try {
-        entry.pulls = await GitHubService.getPulls(orgName, repoName);
+        entry.pulls = await GitHubService.getCachedPulls(orgName, repoName);
       } catch (err) {
         handleError(err);
       } finally {
@@ -118,7 +141,7 @@ export const GitHubStore = defineStore("GitHubStore", {
       if (!entry) return;
       entry.actionsLoading = true;
       try {
-        entry.actions = await GitHubService.getActions(orgName, repoName);
+        entry.actions = await GitHubService.getCachedActions(orgName, repoName);
       } catch (err) {
         handleError(err);
       } finally {

@@ -7,6 +7,7 @@ import { ensureDir, remove } from "fs-extra";
 import path from "path";
 import { SSHGetPrivateKeyPath } from "../ssh/SSH";
 import { FileUpdateStatus } from "../model/FileUpdateStatus";
+import { SourceCodeMetricsIncrementCommits } from "../metrics/SourceCodeMetrics";
 
 const logger = OTelLogger().createModuleLogger("Git");
 let config: Config;
@@ -208,6 +209,7 @@ export async function GitCommit(
         project.projectId
       } && git commit -m "${message.replace(/"/g, '\\"')}"`,
     );
+    SourceCodeMetricsIncrementCommits(1);
     span.end();
   } catch (err) {
     logger.error(`Failed to commit`, err, span);
