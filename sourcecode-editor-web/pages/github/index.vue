@@ -242,9 +242,9 @@ export default {
       useRouter().push({ path: "/users" });
       return;
     }
-    await store.init();
-    if (store.enabled) {
-      await store.fetchRepos();
+    await this.store.init();
+    if (this.store.enabled) {
+      await this.store.fetchRepos();
     }
   },
   methods: {
@@ -253,10 +253,10 @@ export default {
         type: "info",
         text: "Refreshing GitHub...",
       });
-      await store.fetchRepos();
+      await this.store.fetchRepos();
     },
     onToggleOrg(orgName) {
-      store.toggleOrg(orgName);
+      this.store.toggleOrg(orgName);
     },
     openCreatePR(orgName, repo) {
       this.createPROrg = orgName;
@@ -271,7 +271,7 @@ export default {
       this.createPRDefaultBranch = "";
     },
     async onCreatePR(orgName, repoName, title, head, base) {
-      await store.createPR(orgName, repoName, title, head, base);
+      await this.store.createPR(orgName, repoName, title, head, base);
       this.onCloseCreatePRDialog();
     },
     async mergePR(orgName, repoName, pr) {
@@ -282,7 +282,7 @@ export default {
       ) {
         return;
       }
-      await store.mergePR(orgName, repoName, pr.number);
+      await this.store.mergePR(orgName, repoName, pr.number);
     },
     actionStatusClass(run) {
       if (
