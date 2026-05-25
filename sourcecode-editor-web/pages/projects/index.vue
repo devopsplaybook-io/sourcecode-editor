@@ -13,19 +13,6 @@
         {{ project.name }}
         <span class="activity-indicators">
           <span
-            v-if="gitProjectsStore.hasRecentActivity(project)"
-            class="activity-badge"
-            title="Recent GitHub activity"
-          >
-            <i class="bi bi-activity"></i>
-          </span>
-          <span
-            v-if="gitProjectsStore.getLastActivityText(project)"
-            class="activity-time"
-          >
-            {{ gitProjectsStore.getLastActivityText(project) }}
-          </span>
-          <span
             v-if="repositoryEventsStore.isBusy(project.projectId)"
             class="project-busy"
             :title="repositoryEventsStore.activeOperation(project.projectId)"
@@ -113,10 +100,6 @@
 const gitProjectsStore = GitProjectsStore();
 const repositoryEventsStore = RepositoryEventsStore();
 repositoryEventsStore.init();
-// Re-sort whenever projects change
-gitProjectsStore.$subscribe(() => {
-  gitProjectsStore.sortByActivity();
-});
 </script>
 
 <script>
@@ -291,11 +274,11 @@ export default {
   grid-template-columns: 1fr auto;
 }
 #object-actions span {
-  padding-top: 0.3rem;
+  padding-top: var(--pad-tight);
 }
 #object-search {
-  padding-top: 0.5em;
-  padding-bottom: 0.5em;
+  padding-top: var(--gap-inline);
+  padding-bottom: var(--gap-inline);
   padding-left: 3em;
   height: 2.6rem;
 }
@@ -315,11 +298,11 @@ export default {
 #object-list div,
 #object-list span,
 #object-list p {
-  font-size: 0.9em;
+  font-size: var(--font-icon);
 }
 .project-busy {
-  margin-left: 0.5rem;
-  font-size: 0.85em;
+  margin-left: var(--gap-inline);
+  font-size: var(--font-body);
   opacity: 0.7;
 }
 .project-busy .spin {
@@ -335,19 +318,7 @@ export default {
 .activity-indicators {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  margin-left: 0.5rem;
-}
-
-.activity-badge {
-  color: var(--pico-ins-color);
-  font-size: 0.85em;
-  opacity: 0.8;
-}
-
-.activity-time {
-  font-size: 0.75em;
-  opacity: 0.5;
-  white-space: nowrap;
+  gap: var(--gap-tight);
+  margin-left: var(--gap-inline);
 }
 </style>

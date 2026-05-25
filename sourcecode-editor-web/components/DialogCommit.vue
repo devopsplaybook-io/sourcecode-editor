@@ -239,7 +239,7 @@ export default {
 .commit-file-row {
   display: flex;
   align-items: center;
-  gap: 0.5em;
+  gap: var(--gap-inline);
   padding: 0.15em 0;
 }
 .commit-file-label {
@@ -249,7 +249,7 @@ export default {
 .commit-file-action {
   cursor: pointer;
   text-decoration: none;
-  font-size: 0.9em;
+  font-size: var(--font-icon);
   white-space: nowrap;
 }
 .commit-file-discard {

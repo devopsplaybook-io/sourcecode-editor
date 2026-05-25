@@ -100,11 +100,17 @@ export default {
   padding-bottom: 0.2em;
 }
 .menu-links li {
-  padding-right: 1em;
-  font-size: 1.1em;
+  padding-right: var(--pad-container);
+  font-size: var(--font-icon-large);
 }
+.menu-links li a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-inline);
+}
+
 .menu-links .inactive {
-  opacity: 0.3;
+  opacity: var(--opacity-disabled);
 }
 .menu-links .active {
   color: #3cabff;

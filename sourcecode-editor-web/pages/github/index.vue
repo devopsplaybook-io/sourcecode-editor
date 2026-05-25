@@ -4,13 +4,9 @@
       <h3>
         <i class="bi bi-github"></i> GitHub
         <i
-          v-if="store.loading"
-          class="bi bi-arrow-repeat spin github-refresh-icon"
-        ></i>
-        <i
-          v-else
-          class="bi bi-arrow-clockwise github-refresh-icon"
-          @click="refresh()"
+          class="bi github-refresh-icon"
+          :class="store.loading ? 'bi-arrow-repeat spin' : 'bi-arrow-clockwise'"
+          @click="!store.loading && refresh()"
         ></i>
       </h3>
       <div class="header-actions">
@@ -216,24 +212,28 @@
         </header>
         <div>
           <label for="add-org">Organization</label>
-          <input
-            id="add-org"
-            v-model="newOrg"
-            type="text"
-            placeholder="e.g. my-org"
-          />
+          <select id="add-org" v-model="selectedOrg" @change="onOrgChange">
+            <option disabled value="">Select organization</option>
+            <option v-for="org in availableOrgs" :key="org" :value="org">
+              {{ org }}
+            </option>
+          </select>
 
           <label for="add-repo">Repository</label>
-          <input
-            id="add-repo"
-            v-model="newRepo"
-            type="text"
-            placeholder="e.g. my-repo"
-          />
+          <select id="add-repo" v-model="selectedRepo" :disabled="!selectedOrg">
+            <option disabled value="">Select repository</option>
+            <option
+              v-for="repo in availableReposForOrg"
+              :key="repo.full_name"
+              :value="repo.name"
+            >
+              {{ repo.name }}
+            </option>
+          </select>
         </div>
         <footer>
           <button class="secondary" @click="closeAddRepoDialog">Cancel</button>
-          <button @click="addRepo" :disabled="!newOrg || !newRepo">
+          <button @click="addRepo" :disabled="!selectedOrg || !selectedRepo">
             <i class="bi bi-plus-lg"></i> Add
           </button>
         </footer>
@@ -264,13 +264,20 @@ export default {
       createPROrg: "",
       createPRRepo: "",
       createPRDefaultBranch: "",
-      newOrg: "",
-      newRepo: "",
+      availableOrgs: [],
+      availableRepos: {},
+      selectedOrg: "",
+      selectedRepo: "",
+      loadingRepos: false,
     };
   },
   computed: {
     store() {
       return GitHubStore();
+    },
+    availableReposForOrg() {
+      if (!this.selectedOrg) return [];
+      return this.availableRepos[this.selectedOrg] || [];
     },
   },
   async created() {
@@ -290,18 +297,31 @@ export default {
     },
     async openAddRepoDialog() {
       this.showAddRepoDialog = true;
-      this.newOrg = "";
-      this.newRepo = "";
+      this.selectedOrg = "";
+      this.selectedRepo = "";
+      this.loadingRepos = true;
+      try {
+        const orgs = await GitHubService.listAllRepos();
+        this.availableOrgs = Object.keys(orgs).sort();
+        this.availableRepos = orgs;
+      } catch (err) {
+        handleError(err);
+      } finally {
+        this.loadingRepos = false;
+      }
     },
     closeAddRepoDialog() {
       this.showAddRepoDialog = false;
-      this.newOrg = "";
-      this.newRepo = "";
+      this.selectedOrg = "";
+      this.selectedRepo = "";
     },
     async addRepo() {
-      if (!this.newOrg || !this.newRepo) return;
-      await this.store.addRepo(this.newOrg.trim(), this.newRepo.trim());
+      if (!this.selectedOrg || !this.selectedRepo) return;
+      await this.store.addRepo(this.selectedOrg, this.selectedRepo);
       this.closeAddRepoDialog();
+    },
+    onOrgChange() {
+      this.selectedRepo = "";
     },
     openGitHub(url) {
       if (url) window.open(url, "_blank");
@@ -389,30 +409,30 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 0.75rem;
+  padding-bottom: var(--gap-section);
 }
 
 #github-header h3 {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--gap-inline);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--gap-inline);
 }
 
 .header-actions button {
   margin: 0;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.6rem;
+  font-size: var(--font-body);
+  padding: var(--pad-button);
 }
 
 .github-refresh-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-icon-large);
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s;
@@ -420,6 +440,10 @@ export default {
 
 .github-refresh-icon:hover {
   opacity: 1;
+}
+
+.github-refresh-icon.spin {
+  cursor: default;
 }
 
 .spin {
@@ -435,8 +459,8 @@ export default {
 
 .github-disabled {
   text-align: center;
-  padding: 2rem;
-  opacity: 0.7;
+  padding: var(--pad-page);
+  opacity: var(--opacity-muted);
 }
 
 .github-disabled code {
@@ -448,7 +472,7 @@ export default {
 .github-loading {
   display: flex;
   justify-content: center;
-  padding: 2rem;
+  padding: var(--pad-page);
 }
 
 /* Signals-scroll is the scrollable content area */
@@ -461,7 +485,7 @@ export default {
 .repo-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
+  gap: var(--gap-section);
 }
 
 @media (min-width: 800px) {
@@ -472,35 +496,40 @@ export default {
 
 .repo-card {
   margin: 0;
+  padding: var(--pad-section);
 }
 
 .repo-card header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--gap-inline);
   border: none;
 }
 
 .repo-title {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  gap: var(--gap-tight);
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--pad-tight) 0;
 }
 
 .repo-title strong {
-  font-size: 1rem;
+  font-size: var(--font-body-large);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .repo-org {
-  font-size: 0.8rem;
-  opacity: 0.6;
+  font-size: var(--font-body);
+  opacity: var(--opacity-muted);
+  flex-shrink: 0;
 }
 
 .badge-private {
-  font-size: 0.65rem;
+  font-size: var(--font-label);
   padding: 0.1em 0.4em;
   border-radius: var(--pico-border-radius);
   background: color-mix(in srgb, var(--pico-muted-color) 20%, transparent);
@@ -511,39 +540,39 @@ export default {
 
 .repo-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--gap-inline);
   flex-shrink: 0;
 }
 
 .repo-actions i {
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-body-large);
   opacity: 0.5;
   transition: opacity 0.2s;
 }
 
 .repo-actions i:hover {
-  opacity: 1;
+  opacity: var(--opacity-hover);
 }
 
 /* Stats row */
 .repo-stats {
   display: flex;
-  gap: 1.5rem;
-  padding: 0.5rem 0;
+  gap: var(--gap-wide);
+  padding: var(--pad-inline) 0;
   flex-wrap: wrap;
 }
 
 .stat {
-  font-size: 0.85rem;
+  font-size: var(--font-body);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--gap-tight);
   opacity: 0.8;
 }
 
 .stat i {
-  font-size: 0.9rem;
+  font-size: var(--font-icon);
 }
 
 .stat-good {
@@ -564,45 +593,45 @@ export default {
 
 /* Details sections */
 details {
-  margin-top: 0.3rem;
+  margin-top: var(--gap-tight);
 }
 
 details summary {
-  font-size: 0.85rem;
+  font-size: var(--font-body);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--gap-tight);
   cursor: pointer;
-  padding: 0.3rem 0;
+  padding: var(--pad-tight) 0;
 }
 
 details summary i {
-  font-size: 0.9rem;
+  font-size: var(--font-icon);
 }
 
 .action-refresh-btn {
   margin: 0;
   margin-left: auto;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.75rem;
+  padding: var(--pad-button-sm);
+  font-size: var(--font-meta);
 }
 
 .detail-empty {
-  font-size: 0.8rem;
+  font-size: var(--font-body);
   opacity: 0.5;
   font-style: italic;
-  padding: 0.3rem 0;
+  padding: var(--pad-tight) 0;
 }
 
 /* PR Row */
 .pr-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
+  gap: var(--gap-inline);
+  padding: var(--pad-tight) 0;
   border-bottom: 1px solid var(--pico-muted-border-color, #333);
-  font-size: 0.82rem;
+  font-size: var(--font-body);
 }
 
 .pr-row:last-child {
@@ -612,13 +641,13 @@ details summary i {
 .pr-info {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex: 1;
+  gap: var(--gap-tight);
   min-width: 0;
+  overflow: hidden;
 }
 
 .pr-status {
-  font-size: 0.65rem;
+  font-size: var(--font-label);
   padding: 0.1em 0.4em;
   border-radius: var(--pico-border-radius);
   font-weight: 600;
@@ -656,26 +685,24 @@ details summary i {
 }
 
 .pr-meta {
-  font-size: 0.75rem;
-  opacity: 0.6;
+  font-size: var(--font-meta);
+  opacity: var(--opacity-muted);
   white-space: nowrap;
-}
-
-.pr-actions {
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pr-merge-btn {
-  font-size: 0.72rem;
-  padding: 0.15rem 0.4rem;
+  font-size: var(--font-meta);
+  padding: var(--pad-button-sm);
   margin: 0;
 }
 
 /* Action Row */
 .action-row {
-  padding: 0.3rem 0;
+  padding: var(--pad-tight) 0;
   border-bottom: 1px solid var(--pico-muted-border-color, #333);
-  font-size: 0.82rem;
+  font-size: var(--font-body);
 }
 
 .action-row:last-child {
@@ -683,14 +710,14 @@ details summary i {
 }
 
 .action-info {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--gap-tight);
 }
 
 .action-status-icon {
-  font-size: 0.9rem;
-  flex-shrink: 0;
+  font-size: var(--font-icon);
 }
 
 .action-pending {
@@ -724,10 +751,11 @@ details summary i {
 }
 
 .action-meta {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  margin-left: auto;
+  font-size: var(--font-meta);
+  opacity: var(--opacity-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Empty state */
@@ -736,13 +764,13 @@ details summary i {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  opacity: 0.6;
+  padding: var(--pad-page);
+  opacity: var(--opacity-muted);
   text-align: center;
 }
 
 .empty-state i {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  font-size: var(--font-icon-xl);
+  margin-bottom: var(--gap-inline);
 }
 </style>

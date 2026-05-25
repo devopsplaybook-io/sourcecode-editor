@@ -35,10 +35,21 @@ export const GitHubStore = defineStore("GitHubStore", {
     bindEvents(): void {
       if (this.eventsBound) return;
       this.eventsBound = true;
+
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
       RepositoryEventsService.on(
         RepositoryEventTypes.GITHUB_CACHE_UPDATED,
         () => {
-          this.fetchWatchedRepos();
+          // Debounce: coalesce rapid events (e.g. action refresh triggers
+          // both an explicit fetch and a WebSocket event, causing flicker)
+          if (debounceTimer) {
+            clearTimeout(debounceTimer);
+          }
+          debounceTimer = setTimeout(() => {
+            this.fetchWatchedRepos();
+            debounceTimer = null;
+          }, 1500);
         },
       );
     },
@@ -48,6 +59,24 @@ export const GitHubStore = defineStore("GitHubStore", {
       this.loading = true;
       try {
         const entries = await GitHubService.getWatchedRepos();
+
+        // Preserve local UI toggle states (expanded/actionsExpanded)
+        // so that replacing watchedRepos doesn't collapse open sections
+        const prevState = new Map(
+          this.watchedRepos.map((e) => [
+            `${e.org}/${e.repo}`,
+            { expanded: e.expanded, actionsExpanded: e.actionsExpanded },
+          ]),
+        );
+        for (const entry of entries) {
+          const key = `${entry.org}/${entry.repo}`;
+          const prev = prevState.get(key);
+          if (prev) {
+            entry.expanded = prev.expanded;
+            entry.actionsExpanded = prev.actionsExpanded;
+          }
+        }
+
         this.watchedRepos = entries;
         this.lastUpdated = Date.now();
       } catch (err) {

@@ -104,37 +104,37 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: var(--pad-container);
 }
 .dialog-container {
   width: 100%;
   max-width: 480px;
   background: var(--pico-card-background-color, #1a1d1e);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: var(--radius-default);
+  padding: var(--pad-container);
 }
 .dialog-container header {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--gap-section);
 }
 .dialog-container footer {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--gap-inline);
+  margin-top: var(--gap-layout);
   padding: 0;
 }
 .dialog-body {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--gap-section);
 }
 .dialog-body label {
   margin-bottom: 0.2rem;
-  font-size: 0.85rem;
+  font-size: var(--font-body);
 }
 .dialog-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: var(--gap-section);
 }
 .dialog-field {
   display: grid;

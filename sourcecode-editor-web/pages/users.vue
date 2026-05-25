@@ -99,7 +99,7 @@ export default {
           .post(
             `${(await Config.get()).SERVER_URL}/users`,
             this.user,
-            await AuthService.getAuthHeader()
+            await AuthService.getAuthHeader(),
           )
           .then((res) => {
             EventBus.emit(EventTypes.ALERT_MESSAGE, {
@@ -123,7 +123,7 @@ export default {
           .post(
             `${(await Config.get()).SERVER_URL}/users/session`,
             this.user,
-            await AuthService.getAuthHeader()
+            await AuthService.getAuthHeader(),
           )
           .then((res) => {
             AuthService.saveToken(res.data.token);
@@ -148,7 +148,7 @@ export default {
           .put(
             `${(await Config.get()).SERVER_URL}/users/password`,
             this.user,
-            await AuthService.getAuthHeader()
+            await AuthService.getAuthHeader(),
           )
           .then((res) => {
             EventBus.emit(EventTypes.ALERT_MESSAGE, {
@@ -179,7 +179,7 @@ export default {
       EventBus.emit(EventTypes.ALERT_MESSAGE, {
         type: "info",
         text: `Refresh interval set to ${this.getRefreshIntervalLabel(
-          this.refreshInterval
+          this.refreshInterval,
         )}`,
       });
     },
@@ -206,7 +206,7 @@ export default {
       try {
         const res = await axios.get(
           `${(await Config.get()).SERVER_URL}/ssh/public-key`,
-          await AuthService.getAuthHeader()
+          await AuthService.getAuthHeader(),
         );
         this.sshPublicKey = res.data.public_key;
       } catch (err) {
@@ -223,9 +223,9 @@ export default {
   width: min(100%, 50em);
 }
 button {
-  margin-right: 1em;
+  margin-right: var(--pad-container);
 }
 h1 {
-  margin-top: 1em;
+  margin-top: var(--pad-container);
 }
 </style>

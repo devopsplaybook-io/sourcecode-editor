@@ -10,6 +10,7 @@ import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import {
   GitHubIsEnabled,
+  GitHubListRepos,
   GitHubListPulls,
   GitHubGetLatestActions,
   GitHubCreatePull,
@@ -32,6 +33,23 @@ export class GitHubRoutes {
     // Health/status check
     fastify.get("/", async (req, res) => {
       return res.status(200).send({ enabled: GitHubIsEnabled() });
+    });
+
+    // List all accessible repos (for the Add Repo dialog)
+    fastify.get("/repos", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      if (!GitHubIsEnabled()) {
+        return res.status(501).send({ error: "GitHub Not Enabled" });
+      }
+      try {
+        const organizations = await GitHubListRepos();
+        return res.status(200).send({ organizations });
+      } catch (err) {
+        logger.error("Failed to list repos", err);
+        return res.status(502).send({ error: "GitHub API Error" });
+      }
     });
 
     // List PRs for a repo

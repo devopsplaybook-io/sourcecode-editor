@@ -38,12 +38,10 @@ export default {
   pointer-events: none;
 }
 .message {
-  padding: 1rem;
-  margin: 1rem;
+  padding: var(--pad-container);
+  margin: var(--pad-container);
   color: #eee;
   pointer-events: auto;
-}
-.message {
   background-color: #546e7a;
 }
 .message-info {

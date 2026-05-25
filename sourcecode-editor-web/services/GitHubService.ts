@@ -39,6 +39,10 @@ export interface GitHubActionRun {
   workflow_id: number;
 }
 
+export interface GitHubOrganizations {
+  [orgName: string]: GitHubRepo[];
+}
+
 export interface WatchedRepoEntry {
   org: string;
   repo: string;
@@ -56,6 +60,14 @@ export class GitHubService {
       ...(await AuthService.getAuthHeader()),
     });
     return res.data.enabled;
+  }
+
+  static async listAllRepos(): Promise<GitHubOrganizations> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/repos`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.organizations;
   }
 
   static async getWatchedRepos(): Promise<WatchedRepoEntry[]> {

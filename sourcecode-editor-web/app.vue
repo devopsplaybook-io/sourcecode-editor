@@ -46,7 +46,7 @@ header {
 
 header,
 main {
-  padding: 0.5em;
+  padding: var(--pad-inline);
 }
 
 main {
@@ -70,8 +70,8 @@ main {
 .actions i {
   font-size: 1.3em;
   cursor: pointer;
-  margin-left: 0.5em;
-  margin-right: 0.5em;
+  margin-left: var(--gap-inline);
+  margin-right: var(--gap-inline);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,9 +86,9 @@ main {
 }
 
 .action-controls button {
-  font-size: 0.8rem;
-  padding: 0.5rem 0.8rem;
-  margin-right: 0.5rem;
+  font-size: var(--font-body);
+  padding: var(--pad-button);
+  margin-right: var(--gap-inline);
 }
 
 /* Files */
@@ -116,22 +116,22 @@ main {
 
 .folder-icon,
 .file-icon {
-  margin-right: 0.3rem;
-  font-size: 1rem;
+  margin-right: var(--gap-tight);
+  font-size: var(--font-body-large);
 }
 
 .node-name {
-  font-size: 1rem;
+  font-size: var(--font-body-large);
   border-bottom: 1px solid #66666666;
 }
 
 .children {
   list-style: none;
-  padding-left: 1em;
+  padding-left: var(--pad-container);
   margin: 0;
 }
 .node-actions i {
-  margin-left: 0.5rem;
+  margin-left: var(--gap-inline);
   cursor: pointer;
 }
 

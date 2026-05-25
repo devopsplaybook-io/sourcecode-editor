@@ -235,7 +235,7 @@ export default {
 
 <style>
 select {
-  padding: 0.5em 1em;
+  padding: var(--pad-inline) var(--pad-container);
   height: 2.6rem;
 }
 
@@ -269,7 +269,7 @@ select {
   box-sizing: border-box;
 }
 #code-layout-files-editor a {
-  margin: 0.4rem;
+  margin: var(--gap-tight);
   text-align: right;
   cursor: pointer;
   text-decoration: none;
