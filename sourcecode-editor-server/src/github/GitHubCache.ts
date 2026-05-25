@@ -3,37 +3,20 @@ import * as fse from "fs-extra";
 import * as path from "path";
 import { Config } from "../Config";
 import {
-  GitHubListRepos,
+  GitHubGetRepoInfo,
   GitHubListPulls,
   GitHubGetLatestActions,
   GitHubListBranches,
   GitHubSetToken,
   GitHubIsEnabled,
-  GitHubOrganizations,
   GitHubRepo,
 } from "./GitHubApi";
 import { getWatchedRepos, WatchedReposInit } from "./WatchedRepos";
-import { GitHubPR, GitHubActionRun } from "./GitHubApi";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import { EventBusEmit } from "../events/EventBus";
 import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 
 const logger = OTelLogger().createModuleLogger("GitHubCache");
-
-export interface ActivityEntry {
-  org: string;
-  repo: string;
-  lastActivity: number;
-  lastPrCreated: number;
-  lastActionUpdated: number;
-}
-
-export interface CachedRepoData {
-  repo: GitHubRepo;
-  pulls: GitHubPR[];
-  actions: GitHubActionRun[];
-  branches: number;
-}
 
 let config: Config;
 let cacheDir: string;
@@ -83,8 +66,6 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
     const watchedRepos = await getWatchedRepos();
     if (watchedRepos.length === 0) {
       logger.info("No watched repos, skipping cache refresh", span);
-      // Write empty repos data
-      await fse.writeJson(path.join(cacheDir, "repos.json"), {}, { spaces: 2 });
       await fse.writeJson(
         path.join(cacheDir, "meta.json"),
         { lastUpdated: Date.now() },
@@ -99,50 +80,37 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
       span,
     );
 
-    // Build org -> repos map for cached repo data
-    const orgs: GitHubOrganizations = {};
-    // We need to fetch actual repo info - first get all user repos to find matching ones
-    const allRepos = await GitHubListRepos();
-
-    // Build a lookup from "org/repo" -> GitHubRepo
-    const repoLookup: Record<string, GitHubRepo> = {};
-    for (const [orgName, repos] of Object.entries(allRepos)) {
-      for (const repo of repos) {
-        repoLookup[`${orgName}/${repo.name}`] = repo;
-      }
-    }
-
-    const activityEntries: ActivityEntry[] = [];
     const pullsDir = path.join(cacheDir, "pulls");
     const actionsDir = path.join(cacheDir, "actions");
     const branchesDir = path.join(cacheDir, "branches");
+    const reposDir = path.join(cacheDir, "repos");
+    await fse.ensureDir(reposDir);
 
     for (const watched of watchedRepos) {
       const { org: orgName, repo: repoName } = watched;
       const key = `${orgName}/${repoName}`;
-      const repoInfo = repoLookup[key];
 
-      if (!repoInfo) {
-        logger.warn(`Watched repo not found on GitHub: ${key}`, span);
+      // Fetch repo info from GitHub API
+      let repoInfo: GitHubRepo | null = null;
+      try {
+        repoInfo = await GitHubGetRepoInfo(orgName, repoName);
+        await fse.ensureDir(path.join(reposDir, orgName));
+        await fse.writeJson(
+          path.join(reposDir, orgName, `${repoName}.json`),
+          repoInfo,
+          { spaces: 2 },
+        );
+      } catch (err) {
+        logger.warn(
+          `Watched repo not found on GitHub: ${key}: ${err.message}`,
+          span,
+        );
         continue;
       }
-
-      if (!orgs[orgName]) {
-        orgs[orgName] = [];
-      }
-      orgs[orgName].push(repoInfo);
 
       await fse.ensureDir(path.join(pullsDir, orgName));
       await fse.ensureDir(path.join(actionsDir, orgName));
       await fse.ensureDir(path.join(branchesDir, orgName));
-
-      const entry: ActivityEntry = {
-        org: orgName,
-        repo: repoName,
-        lastActivity: 0,
-        lastPrCreated: 0,
-        lastActionUpdated: 0,
-      };
 
       // Fetch PRs
       try {
@@ -152,12 +120,6 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
           pulls,
           { spaces: 2 },
         );
-        for (const pr of pulls) {
-          const prTs = new Date(pr.created_at).getTime();
-          if (prTs > entry.lastPrCreated) {
-            entry.lastPrCreated = prTs;
-          }
-        }
       } catch (err) {
         logger.warn(`Failed to fetch PRs for ${key}: ${err.message}`, span);
       }
@@ -170,12 +132,6 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
           actions,
           { spaces: 2 },
         );
-        for (const action of actions) {
-          const actionTs = new Date(action.updated_at).getTime();
-          if (actionTs > entry.lastActionUpdated) {
-            entry.lastActionUpdated = actionTs;
-          }
-        }
       } catch (err) {
         logger.warn(`Failed to fetch actions for ${key}: ${err.message}`, span);
       }
@@ -194,21 +150,9 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
           span,
         );
       }
-
-      entry.lastActivity = Math.max(
-        entry.lastPrCreated,
-        entry.lastActionUpdated,
-      );
-      activityEntries.push(entry);
     }
 
-    // Write cached data
-    await fse.writeJson(path.join(cacheDir, "repos.json"), orgs, {
-      spaces: 2,
-    });
-    await fse.writeJson(path.join(cacheDir, "activity.json"), activityEntries, {
-      spaces: 2,
-    });
+    // Write cache metadata
     await fse.writeJson(
       path.join(cacheDir, "meta.json"),
       { lastUpdated: Date.now() },
@@ -222,10 +166,7 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
       eventDetail: { ts: Date.now() },
     });
 
-    logger.info(
-      `GitHub cache refreshed: ${Object.keys(orgs).length} orgs, ${watchedRepos.length} repos`,
-      span,
-    );
+    logger.info(`GitHub cache refreshed: ${watchedRepos.length} repos`, span);
   } catch (err) {
     logger.error("GitHub cache refresh failed", err, span);
   }

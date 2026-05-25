@@ -36,26 +36,25 @@ export class GitHubCacheRoutes {
       }
       try {
         const watchedRepos = await getWatchedRepos();
-        const reposPath = path.join(cacheDir, "repos.json");
+        const reposDir = path.join(cacheDir, "repos");
         const pullsDir = path.join(cacheDir, "pulls");
         const actionsDir = path.join(cacheDir, "actions");
         const branchesDir = path.join(cacheDir, "branches");
 
-        let orgRepos: Record<string, Record<string, unknown>[]> = {};
-        if (await fse.pathExists(reposPath)) {
-          orgRepos = await fse.readJson(reposPath);
-        }
-
         const entries: Record<string, unknown>[] = [];
         for (const watched of watchedRepos) {
           const { org, repo } = watched;
-          // Find repo info from cached repos
-          const orgData = orgRepos[org] || [];
-          const repoInfo =
-            orgData.find(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (r: any) => r.name === repo,
-            ) || null;
+
+          // Read repo info from per-repo file
+          let repoInfo: Record<string, unknown> | null = null;
+          const repoInfoPath = path.join(reposDir, org, `${repo}.json`);
+          if (await fse.pathExists(repoInfoPath)) {
+            try {
+              repoInfo = await fse.readJson(repoInfoPath);
+            } catch {
+              repoInfo = null;
+            }
+          }
 
           // Read pulls
           let pulls: unknown[] = [];
@@ -180,27 +179,6 @@ export class GitHubCacheRoutes {
       },
     );
 
-    // List all cached repos grouped by organization (only watched repos)
-    fastify.get("/repos", async (req, res) => {
-      if (!(await AuthGetUserSession(req)).isAuthenticated) {
-        return res.status(403).send({ error: "Access Denied" });
-      }
-      if (!GitHubIsEnabled()) {
-        return res.status(501).send({ error: "GitHub Not Enabled" });
-      }
-      try {
-        const reposPath = path.join(cacheDir, "repos.json");
-        if (!(await fse.pathExists(reposPath))) {
-          return res.status(200).send({ organizations: {} });
-        }
-        const organizations = await fse.readJson(reposPath);
-        return res.status(200).send({ organizations });
-      } catch (err) {
-        logger.error("Failed to read cached GitHub repos", err);
-        return res.status(502).send({ error: "Cache Read Error" });
-      }
-    });
-
     // List cached PRs for a repo
     fastify.get<{ Params: { owner: string; repo: string } }>(
       "/pulls/:owner/:repo",
@@ -273,24 +251,6 @@ export class GitHubCacheRoutes {
         return res.status(200).send({ lastUpdated: meta.lastUpdated });
       } catch (err) {
         logger.error("Failed to read cache meta", err);
-        return res.status(502).send({ error: "Cache Read Error" });
-      }
-    });
-
-    // Get activity timestamps for all repos
-    fastify.get("/activity", async (req, res) => {
-      if (!(await AuthGetUserSession(req)).isAuthenticated) {
-        return res.status(403).send({ error: "Access Denied" });
-      }
-      try {
-        const activityPath = path.join(cacheDir, "activity.json");
-        if (!(await fse.pathExists(activityPath))) {
-          return res.status(200).send({ activity: [] });
-        }
-        const activity = await fse.readJson(activityPath);
-        return res.status(200).send({ activity });
-      } catch (err) {
-        logger.error("Failed to read activity data", err);
         return res.status(502).send({ error: "Cache Read Error" });
       }
     });

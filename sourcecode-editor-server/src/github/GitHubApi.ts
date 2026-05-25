@@ -61,6 +61,16 @@ function apiHeaders(): Record<string, string> {
   };
 }
 
+export async function GitHubGetRepoInfo(
+  owner: string,
+  repo: string,
+): Promise<GitHubRepo> {
+  const res = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: apiHeaders(),
+  });
+  return res.data as GitHubRepo;
+}
+
 export async function GitHubListRepos(): Promise<GitHubOrganizations> {
   const orgs: GitHubOrganizations = {};
   let page = 1;

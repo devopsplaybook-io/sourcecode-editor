@@ -39,10 +39,6 @@ export interface GitHubActionRun {
   workflow_id: number;
 }
 
-export interface GitHubOrganizations {
-  [orgName: string]: GitHubRepo[];
-}
-
 export interface WatchedRepoEntry {
   org: string;
   repo: string;
@@ -93,14 +89,6 @@ export class GitHubService {
     );
   }
 
-  static async getCachedRepos(): Promise<GitHubOrganizations> {
-    const res = await axios.get(
-      `${(await Config.get()).SERVER_URL}/github/cache/repos`,
-      await AuthService.getAuthHeader(),
-    );
-    return res.data.organizations;
-  }
-
   static async getCachedPulls(
     owner: string,
     repo: string,
@@ -129,24 +117,6 @@ export class GitHubService {
       await AuthService.getAuthHeader(),
     );
     return res.data.lastUpdated;
-  }
-
-  static async getActivity(): Promise<
-    { org: string; repo: string; lastActivity: number }[]
-  > {
-    const res = await axios.get(
-      `${(await Config.get()).SERVER_URL}/github/cache/activity`,
-      await AuthService.getAuthHeader(),
-    );
-    return res.data.activity;
-  }
-
-  static async getRepos(): Promise<GitHubOrganizations> {
-    const res = await axios.get(
-      `${(await Config.get()).SERVER_URL}/github/repos`,
-      await AuthService.getAuthHeader(),
-    );
-    return res.data.organizations;
   }
 
   static async getPulls(owner: string, repo: string): Promise<GitHubPR[]> {

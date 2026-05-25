@@ -214,37 +214,26 @@
           ></button>
           <h3><i class="bi bi-plus-lg"></i> Add GitHub Repository</h3>
         </header>
-        <div
-          v-if="availableOrgs.length === 0 && !loadingOrgs"
-          class="detail-empty"
-          style="padding: 1rem 0"
-        >
-          Loading available repos...
-        </div>
-        <div v-else>
+        <div>
           <label for="add-org">Organization</label>
-          <select id="add-org" v-model="selectedOrg">
-            <option value="" disabled>Select organization</option>
-            <option v-for="org in availableOrgs" :key="org" :value="org">
-              {{ org }}
-            </option>
-          </select>
+          <input
+            id="add-org"
+            v-model="newOrg"
+            type="text"
+            placeholder="e.g. my-org"
+          />
 
-          <label v-if="selectedOrg" for="add-repo">Repository</label>
-          <select v-if="selectedOrg" id="add-repo" v-model="selectedRepo">
-            <option value="" disabled>Select repository</option>
-            <option
-              v-for="r in availableReposForOrg"
-              :key="r.name"
-              :value="r.name"
-            >
-              {{ r.name }}
-            </option>
-          </select>
+          <label for="add-repo">Repository</label>
+          <input
+            id="add-repo"
+            v-model="newRepo"
+            type="text"
+            placeholder="e.g. my-repo"
+          />
         </div>
         <footer>
           <button class="secondary" @click="closeAddRepoDialog">Cancel</button>
-          <button @click="addRepo" :disabled="!selectedOrg || !selectedRepo">
+          <button @click="addRepo" :disabled="!newOrg || !newRepo">
             <i class="bi bi-plus-lg"></i> Add
           </button>
         </footer>
@@ -275,19 +264,13 @@ export default {
       createPROrg: "",
       createPRRepo: "",
       createPRDefaultBranch: "",
-      availableOrgs: [],
-      availableRepos: {},
-      selectedOrg: "",
-      selectedRepo: "",
-      loadingOrgs: false,
+      newOrg: "",
+      newRepo: "",
     };
   },
   computed: {
     store() {
       return GitHubStore();
-    },
-    availableReposForOrg() {
-      return this.availableRepos[this.selectedOrg] || [];
     },
   },
   async created() {
@@ -307,29 +290,17 @@ export default {
     },
     async openAddRepoDialog() {
       this.showAddRepoDialog = true;
-      this.selectedOrg = "";
-      this.selectedRepo = "";
-      if (this.availableOrgs.length === 0 && !this.loadingOrgs) {
-        this.loadingOrgs = true;
-        try {
-          const orgs = await GitHubService.getRepos();
-          this.availableOrgs = Object.keys(orgs).sort();
-          this.availableRepos = orgs;
-        } catch (err) {
-          handleError(err);
-        } finally {
-          this.loadingOrgs = false;
-        }
-      }
+      this.newOrg = "";
+      this.newRepo = "";
     },
     closeAddRepoDialog() {
       this.showAddRepoDialog = false;
-      this.selectedOrg = "";
-      this.selectedRepo = "";
+      this.newOrg = "";
+      this.newRepo = "";
     },
     async addRepo() {
-      if (!this.selectedOrg || !this.selectedRepo) return;
-      await this.store.addRepo(this.selectedOrg, this.selectedRepo);
+      if (!this.newOrg || !this.newRepo) return;
+      await this.store.addRepo(this.newOrg.trim(), this.newRepo.trim());
       this.closeAddRepoDialog();
     },
     openGitHub(url) {

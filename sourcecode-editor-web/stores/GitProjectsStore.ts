@@ -5,7 +5,6 @@ import { handleError } from "~~/services/EventBus";
 import { RepositoryEventsService } from "~~/services/RepositoryEventsService";
 import { RepositoryEventTypes } from "~~/services/RepositoryEventTypes";
 import type { RepositoryEvent } from "~~/services/RepositoryEventTypes";
-import { GitHubService } from "~~/services/GitHubService";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ProjectEntry = any;
@@ -13,7 +12,6 @@ type ProjectEntry = any;
 export const GitProjectsStore = defineStore("GitProjectsStore", {
   state: () => ({
     projects: [] as ProjectEntry[],
-    activityMap: {} as Record<string, number>,
     eventsBound: false,
   }),
   getters: {},
@@ -111,68 +109,6 @@ export const GitProjectsStore = defineStore("GitProjectsStore", {
           });
         })
         .catch(handleError);
-
-      // Load GitHub activity data for sorting
-      try {
-        const activity = await GitHubService.getActivity();
-        const activityMap: Record<string, number> = {};
-        // Map project name patterns to activity timestamps
-        for (const entry of activity) {
-          const key = `${entry.org}/${entry.repo}`;
-          activityMap[key] = entry.lastActivity || 0;
-          // Also index by repo name alone
-          activityMap[entry.repo] = Math.max(
-            activityMap[entry.repo] || 0,
-            entry.lastActivity || 0,
-          );
-        }
-        this.activityMap = activityMap;
-      } catch {
-        // Activity data is optional for project ordering
-      }
-
-      // Sort projects: most recent activity first
-      this.sortByActivity();
-    },
-
-    // Sort projects by GitHub activity descending (most recent first)
-    sortByActivity(): void {
-      this.projects.sort((a: ProjectEntry, b: ProjectEntry) => {
-        const activityA = this.getActivityForProject(a);
-        const activityB = this.getActivityForProject(b);
-        return activityB - activityA;
-      });
-    },
-
-    getActivityForProject(project: ProjectEntry): number {
-      // Try matching by project name (which is often "org/repo")
-      if (this.activityMap[project.name]) {
-        return this.activityMap[project.name] || 0;
-      }
-      // Try by projectId lookup
-      if (this.activityMap[project.projectId]) {
-        return this.activityMap[project.projectId] || 0;
-      }
-      return 0;
-    },
-
-    getLastActivityText(project: ProjectEntry): string {
-      const activity = this.getActivityForProject(project);
-      if (!activity) return "";
-      const diff = Date.now() - activity;
-      const mins = Math.floor(diff / 60000);
-      if (mins < 1) return "just now";
-      if (mins < 60) return `${mins}m ago`;
-      const hours = Math.floor(mins / 60);
-      if (hours < 24) return `${hours}h ago`;
-      const days = Math.floor(hours / 24);
-      return `${days}d ago`;
-    },
-
-    hasRecentActivity(project: ProjectEntry): boolean {
-      const activity = this.getActivityForProject(project);
-      if (!activity) return false;
-      return Date.now() - activity < 7 * 24 * 60 * 60 * 1000; // within 7 days
     },
   },
 });
