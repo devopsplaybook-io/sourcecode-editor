@@ -1,25 +1,35 @@
-## Kubernetes Web LightClient
+# Source Code Editor
 
-Kubernetes Web LightClient is a web-based user interface for Kubernetes. In its current version, it has the following features:
+Source Code Editor is a web-based code editing platform with Git repository management. It allows you to manage, edit, and collaborate on code projects directly from your browser.
 
-- List: Deployment, StatefulSet, DaemonSet, Pod, ConfigMap, Node, Secret, PVC, Namespace
-- For Pod: Delete, Display Log
-- For Deployment, DaemonSet, StatefulSet: Rollout restart
-- For Node: CPU and Memory information
+## Features
 
-![Pods Screenshot](docs/images/pods.png?raw=true)
-![Stats Screenshot](docs/images/stats.png?raw=true)
+- **Project Management**: Add and manage Git repositories (clone, pull, push, commit, checkout, branch management)
+- **Code Editor**: Browse and edit files within repositories with a web-based editor
+- **Git Operations**: Full Git workflow support — commit, push, pull, branch management, reset
+- **GitHub Integration**: Sync and track GitHub repositories, manage pull requests
+- **LLM Assistance**: AI-powered code assistance via DeepSeek (configurable)
+- **SSH Key Management**: Manage SSH public keys for Git over SSH access
+- **User Authentication**: Multi-user support with admin/user roles and JWT-based sessions
+- **OpenTelemetry**: Built-in OpenTelemetry tracing, metrics, and logs export
+
+![Projects Screenshot](docs/images/projects.png?raw=true)
+![Code Editor Screenshot](docs/images/code.png?raw=true)
+![GitHub Integration Screenshot](docs/images/github.png?raw=true)
 
 ## Installation
 
-This client is meant to be deployed with Kubernetes. Here is an example YAML file.
+The application is distributed as a Docker image and can be deployed with Docker Compose or Kubernetes.
 
-**Notes:**
+To launch the application with Docker Compose:
 
-- Adjust the service account permissions as needed.
-- `APPLICATION_TITLE` is an optional name that can be given to the instance.
+```bash
+git clone https://github.com/devopsplaybook-io/sourcecode-editor
+cd sourcecode-editor/docs/deployments/docker-compose/sourcecode-editor
+docker compose up -d
+```
 
-To launch the application in Kubernetes with the default configuration:
+To launch the application in Kubernetes:
 
 ```bash
 git clone https://github.com/devopsplaybook-io/sourcecode-editor
@@ -41,14 +51,28 @@ Configuration can be provided via a JSON configuration file (using the ConfigMap
 
 See the [ConfigMap YAML](docs/deployments/kubernetes/sourcecode-editor/base/configmap.yaml) for an example configuration.
 
-| Parameter                                               | Description                                           | Default       | Availability                        |
-| ------------------------------------------------------- | ----------------------------------------------------- | ------------- | ----------------------------------- |
-| APPLICATION_TITLE                                       | Name of the application (for PWA)                     | Kubernetes    | Environment variable                |
-| STATS_FETCH_FREQUENCY                                   | Frequency (in seconds) to fetch stats from Kubernetes | 60            | Config file or environment variable |
-| STATS_RETENTION                                         | Retention period (in seconds) for stats               | 86400 (1 day) | Config file or environment variable |
-| OPENTELEMETRY_COLLECTOR_HTTP_TRACES                     | Hours before minute-level metrics are compressed      | (empty)       | Config file or environment variable |
-| OPENTELEMETRY_COLLECTOR_HTTP_METRICS                    | Days before hour-level metrics are compressed         | (empty)       | Config file or environment variable |
-| OPENTELEMETRY_COLLECTOR_HTTP_LOGS                       | OTEL collector endpoint for logs                      | (empty)       | Config file or environment variable |
-| OPENTELEMETRY_COLLECTOR_EXPORT_LOGS_INTERVAL_SECONDS    | Interval (in seconds) to export logs                  | 60            | Config file or environment variable |
-| OPENTELEMETRY_COLLECTOR_EXPORT_METRICS_INTERVAL_SECONDS | Interval (in seconds) to export metrics               | 60            | Config file or environment variable |
-| OPENTELEMETRY_COLLECT_AUTHORIZATION_HEADER              | Authorization header for OTEL collection              | (empty)       | Config file or environment variable |
+| Parameter                                               | Description                              | Default                                   | Availability                        |
+| ------------------------------------------------------- | ---------------------------------------- | ----------------------------------------- | ----------------------------------- |
+| APPLICATION_TITLE                                       | Name of the application (for PWA)        | Code                                      | Environment variable                |
+| DATA_DIR                                                | Directory for persistent data storage    | /data                                     | Config file or environment variable |
+| JWT_KEY                                                 | Secret key for JWT token signing         | (auto)                                    | Config file or environment variable |
+| JWT_VALIDITY_DURATION                                   | JWT token validity duration in seconds   | 8035200                                   | Config file or environment variable |
+| CORS_POLICY_ORIGIN                                      | CORS allowed origin                      | \*                                        | Config file or environment variable |
+| PROJECTS_SYNC_FREQUENCY                                 | Frequency (in ms) to sync project status | 3600000                                   | Config file or environment variable |
+| GIT_USERNAME                                            | Default Git username for operations      | (empty)                                   | Config file or environment variable |
+| GIT_EMAIL                                               | Default Git email for operations         | (empty)                                   | Config file or environment variable |
+| LLM_API_KEY                                             | API key for LLM (DeepSeek)               | (empty)                                   | Config file or environment variable |
+| LLM_API_URL                                             | LLM API endpoint URL                     | https://api.deepseek.com/chat/completions | Config file or environment variable |
+| LLM_MODEL                                               | LLM model name                           | deepseek-chat                             | Config file or environment variable |
+| GITHUB_TOKEN                                            | GitHub personal access token             | (empty)                                   | Config file or environment variable |
+| GITHUB_SYNC_FREQUENCY                                   | Frequency (in ms) to sync GitHub repos   | 300000                                    | Config file or environment variable |
+| OPENTELEMETRY_COLLECTOR_HTTP_TRACES                     | OTEL collector endpoint for traces       | (empty)                                   | Config file or environment variable |
+| OPENTELEMETRY_COLLECTOR_HTTP_METRICS                    | OTEL collector endpoint for metrics      | (empty)                                   | Config file or environment variable |
+| OPENTELEMETRY_COLLECTOR_HTTP_LOGS                       | OTEL collector endpoint for logs         | (empty)                                   | Config file or environment variable |
+| OPENTELEMETRY_COLLECTOR_EXPORT_LOGS_INTERVAL_SECONDS    | Interval (in seconds) to export logs     | 60                                        | Config file or environment variable |
+| OPENTELEMETRY_COLLECTOR_EXPORT_METRICS_INTERVAL_SECONDS | Interval (in seconds) to export metrics  | 60                                        | Config file or environment variable |
+| OPENTELEMETRY_COLLECT_AUTHORIZATION_HEADER              | Authorization header for OTEL collection | (empty)                                   | Config file or environment variable |
+
+## Development
+
+See the [Development Guide](docs/dev/README.md) for instructions on setting up a development environment.

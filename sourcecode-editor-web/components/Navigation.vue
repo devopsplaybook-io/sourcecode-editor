@@ -2,7 +2,14 @@
   <nav>
     <ul class="menu-links">
       <li>
-        <NuxtLink to="/"><strong>Code</strong></NuxtLink>
+        <NuxtLink to="/" class="brand-link"
+          ><img
+            src="/images/icon.png"
+            alt="Source Code Editor"
+            class="nav-logo"
+          />
+          <strong>Code</strong></NuxtLink
+        >
       </li>
     </ul>
     <ul class="menu-links">
@@ -107,6 +114,12 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: var(--gap-inline);
+}
+
+.nav-logo {
+  height: 1.4em;
+  vertical-align: middle;
+  margin-right: 0.5rem;
 }
 
 .menu-links .inactive {

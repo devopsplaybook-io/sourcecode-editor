@@ -2,8 +2,8 @@
 version: "3"
 
 services:
-  otel:
-    image: didierhoarau/sourcecode-editor
+  sourcecode-editor:
+    image: devopsplaybookio/sourcecode-editor
     ports:
       - 8080:8080
     volumes:

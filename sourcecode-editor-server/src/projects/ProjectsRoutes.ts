@@ -115,7 +115,7 @@ export class ProjectsRoutes {
           req.params.projectId,
         );
         if (!status) {
-          return res.status(401).send({ error: "Invalid Request" });
+          return res.status(200).send({ status: null });
         }
         res.status(200).send({
           status,

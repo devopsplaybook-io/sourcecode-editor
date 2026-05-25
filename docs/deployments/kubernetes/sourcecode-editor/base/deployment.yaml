@@ -21,7 +21,7 @@ spec:
           name: sourcecode-editor
           env:
             - name: APPLICATION_TITLE
-              value: Kubernetes
+              value: Code
           resources:
             limits:
               memory: 500Mi

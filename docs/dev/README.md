@@ -3,7 +3,7 @@
 In order to start development on sourcecode-editor execute the following:
 
 ```bash
-git clone https://github.com/DidierHoarau/sourcecode-editor
+git clone https://github.com/devopsplaybook-io/sourcecode-editor
 cd sourcecode-editor
 ./docs/dev/run-dev-env.sh
 ```

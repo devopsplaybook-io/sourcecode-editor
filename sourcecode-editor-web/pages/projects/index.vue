@@ -41,30 +41,22 @@
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
         <button
-          v-if="
-            project.status.branchStatus &&
-            project.status.branchStatus.behind > 0
-          "
+          v-if="project.status?.branchStatus?.behind > 0"
           @click="pullProject(project)"
         >
-          Pull ({{ project.status.branchStatus.behind }} behind)
+          Pull ({{ project.status?.branchStatus?.behind }} behind)
         </button>
         <button
-          v-if="
-            project.status.filesUpdateStatus &&
-            project.status.filesUpdateStatus.length > 0
-          "
+          v-if="project.status?.filesUpdateStatus?.length > 0"
           @click="commitProject(project)"
         >
           Commit
         </button>
         <button
-          v-if="
-            project.status.branchStatus && project.status.branchStatus.ahead > 0
-          "
+          v-if="project.status?.branchStatus?.ahead > 0"
           @click="pushProject(project)"
         >
-          Push ({{ project.status.branchStatus.ahead }} ahead)
+          Push ({{ project.status?.branchStatus?.ahead }} ahead)
         </button>
         <button v-if="!project.status" @click="cloneProject(project)">
           Clone
@@ -73,6 +65,7 @@
         <button @click="openCreateBranchDialog(project)">Create Branch</button>
         <button
           v-if="
+            project.status?.currentBranch &&
             project.status.currentBranch != 'main' &&
             project.status.currentBranch != 'master'
           "
