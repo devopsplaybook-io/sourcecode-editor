@@ -7,7 +7,6 @@ import { ensureDir, remove } from "fs-extra";
 import path from "path";
 import { SSHGetPrivateKeyPath } from "../ssh/SSH";
 import { FileUpdateStatus } from "../model/FileUpdateStatus";
-import { SourceCodeMetricsIncrementCommits } from "../metrics/SourceCodeMetrics";
 
 const logger = OTelLogger().createModuleLogger("Git");
 let config: Config;
@@ -209,7 +208,6 @@ export async function GitCommit(
         project.projectId
       } && git commit -m "${message.replace(/"/g, '\\"')}"`,
     );
-    SourceCodeMetricsIncrementCommits(1);
     span.end();
   } catch (err) {
     logger.error(`Failed to commit`, err, span);
@@ -335,7 +333,7 @@ export async function GitGetFileFromHead(
     );
     span.end();
     return content;
-  } catch (err) {
+  } catch {
     // File may not exist in HEAD (new file). Return empty string.
     logger.warn(`File not in HEAD or read failed: ${filePath}`, span);
     span.end();

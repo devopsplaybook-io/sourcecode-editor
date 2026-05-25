@@ -42,9 +42,11 @@ export async function AuthGenerateJWT(user: User): Promise<string> {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export async function AuthMustBeAuthenticated(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   req: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   res: any
 ): Promise<void> {
   let authenticated = false;
@@ -52,7 +54,7 @@ export async function AuthMustBeAuthenticated(
     try {
       jwt.verify(req.headers.authorization.split(" ")[1], config.JWT_KEY);
       authenticated = true;
-    } catch (err) {
+    } catch {
       authenticated = false;
     }
   }

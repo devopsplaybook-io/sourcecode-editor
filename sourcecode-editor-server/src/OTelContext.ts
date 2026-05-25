@@ -3,7 +3,6 @@ import {
   StandardMeter,
   StandardTracer,
 } from "@devopsplaybook.io/otel-utils";
-import { Span } from "@opentelemetry/sdk-trace-base";
 
 let tracer: StandardTracer;
 let meter: StandardMeter;

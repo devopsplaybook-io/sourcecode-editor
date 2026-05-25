@@ -58,6 +58,7 @@ export async function LLMRequest(
     span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
     span.addEvent("LLM Error");
     span.end();
+    // eslint-disable-next-line preserve-caught-error
     throw new Error(error.response?.data?.error?.message || error.message);
   }
 }

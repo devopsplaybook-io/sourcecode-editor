@@ -1,3 +1,14 @@
+// Mock User model to avoid uuid ESM import issue
+jest.mock("../model/User", () => ({
+  User: class {
+    id = "test";
+    name = "";
+    passwordEncrypted = "";
+    static fromJson() { return null; }
+    toJson() { return {}; }
+  },
+}));
+
 import { User } from "../model/User";
 import { UserPasswordCheckPassword, UserPasswordSetPassword } from "./UserPassword";
 

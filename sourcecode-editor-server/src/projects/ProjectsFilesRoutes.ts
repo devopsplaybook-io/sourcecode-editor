@@ -188,8 +188,8 @@ export class ProjectsFilesRoutes {
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
       }
-      let originalContent = "";
-      let currentContent = "";
+      let originalContent: string;
+      let currentContent: string;
       try {
         originalContent = await GitGetFileFromHead(
           OTelRequestSpan(req),

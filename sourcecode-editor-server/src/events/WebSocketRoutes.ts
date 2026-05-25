@@ -18,7 +18,7 @@ const logger = OTelLogger().createModuleLogger("WebSocketRoutes");
 // keeping memory bounded.
 const HEARTBEAT_MS = 30_000;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type LiveSocket = WS & { isAlive?: boolean };
 
 export class RepositoryEventsWebSocket {

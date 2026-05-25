@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthGetUserSession } from "../users/Auth";
 import { Config } from "../Config";
 import { Project } from "../model/Project";
-import { ProjectsDataAdd, ProjectsDataGet } from "../projects/ProjectsData";
+import { ProjectsDataAdd } from "../projects/ProjectsData";
 import { ProjectsSyncStartProject } from "../projects/ProjectsSync";
 import { GitClone } from "../git/Git";
 import { EventBusEmit } from "../events/EventBus";

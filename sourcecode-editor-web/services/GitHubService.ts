@@ -43,12 +43,54 @@ export interface GitHubOrganizations {
   [orgName: string]: GitHubRepo[];
 }
 
+export interface WatchedRepoEntry {
+  org: string;
+  repo: string;
+  repoInfo: GitHubRepo | null;
+  pulls: GitHubPR[];
+  actions: GitHubActionRun[];
+  branches: number;
+  expanded: boolean;
+  actionsExpanded: boolean;
+}
+
 export class GitHubService {
   static async isEnabled(): Promise<boolean> {
     const res = await axios.get(`${(await Config.get()).SERVER_URL}/github`, {
       ...(await AuthService.getAuthHeader()),
     });
     return res.data.enabled;
+  }
+
+  static async getWatchedRepos(): Promise<WatchedRepoEntry[]> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/cache/watched`,
+      await AuthService.getAuthHeader(),
+    );
+    return res.data.entries;
+  }
+
+  static async addWatchedRepo(org: string, repo: string): Promise<void> {
+    await axios.post(
+      `${(await Config.get()).SERVER_URL}/github/cache/watched`,
+      { org, repo },
+      await AuthService.getAuthHeader(),
+    );
+  }
+
+  static async removeWatchedRepo(org: string, repo: string): Promise<void> {
+    await axios.delete(
+      `${(await Config.get()).SERVER_URL}/github/cache/watched/${org}/${repo}`,
+      await AuthService.getAuthHeader(),
+    );
+  }
+
+  static async refreshActions(org: string, repo: string): Promise<void> {
+    await axios.post(
+      `${(await Config.get()).SERVER_URL}/github/cache/actions/refresh/${org}/${repo}`,
+      {},
+      await AuthService.getAuthHeader(),
+    );
   }
 
   static async getCachedRepos(): Promise<GitHubOrganizations> {

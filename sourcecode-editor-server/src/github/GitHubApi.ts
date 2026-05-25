@@ -41,9 +41,7 @@ export interface GitHubActionRun {
   workflow_id: number;
 }
 
-export interface GitHubOrganizations {
-  [orgName: string]: GitHubRepo[];
-}
+export type GitHubOrganizations = Record<string, GitHubRepo[]>;
 
 let token = "";
 
@@ -117,6 +115,26 @@ export async function GitHubGetLatestActions(
     },
   );
   return res.data.workflow_runs as GitHubActionRun[];
+}
+
+export async function GitHubListBranches(
+  owner: string,
+  repo: string,
+): Promise<number> {
+  try {
+    const res = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/branches`,
+      {
+        headers: apiHeaders(),
+        params: { per_page: 100 },
+      },
+    );
+    const branches = res.data as { name: string }[];
+    return branches.length;
+  } catch (err) {
+    logger.warn(`Failed to list branches for ${owner}/${repo}: ${err.message}`);
+    return 0;
+  }
 }
 
 export async function GitHubCreatePull(

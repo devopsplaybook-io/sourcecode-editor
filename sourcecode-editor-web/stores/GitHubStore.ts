@@ -1,44 +1,21 @@
 import { defineStore } from "pinia";
 import {
   GitHubService,
-  type GitHubOrganizations,
-  type GitHubRepo,
-  type GitHubPR,
-  type GitHubActionRun,
+  type WatchedRepoEntry,
 } from "~~/services/GitHubService";
 import { handleError, EventBus, EventTypes } from "~~/services/EventBus";
 import { RepositoryEventsService } from "~~/services/RepositoryEventsService";
 import { RepositoryEventTypes } from "~~/services/RepositoryEventTypes";
 
-interface RepoWithDetails {
-  repo: GitHubRepo;
-  pulls: GitHubPR[];
-  actions: GitHubActionRun[];
-  pullsLoading: boolean;
-  actionsLoading: boolean;
-  expanded: boolean;
-}
-
-interface OrgSection {
-  repos: RepoWithDetails[];
-  expanded: boolean;
-}
-
 export const GitHubStore = defineStore("GitHubStore", {
   state: () => ({
     enabled: false,
-    organizations: {} as Record<string, OrgSection>,
+    watchedRepos: [] as WatchedRepoEntry[],
     loading: false,
     initialized: false,
     lastUpdated: 0,
     eventsBound: false,
   }),
-
-  getters: {
-    orgNames(state): string[] {
-      return Object.keys(state.organizations).sort();
-    },
-  },
 
   actions: {
     async init(): Promise<void> {
@@ -47,6 +24,9 @@ export const GitHubStore = defineStore("GitHubStore", {
       this.bindEvents();
       try {
         this.enabled = await GitHubService.isEnabled();
+        if (this.enabled) {
+          await this.fetchWatchedRepos();
+        }
       } catch {
         this.enabled = false;
       }
@@ -58,38 +38,18 @@ export const GitHubStore = defineStore("GitHubStore", {
       RepositoryEventsService.on(
         RepositoryEventTypes.GITHUB_CACHE_UPDATED,
         () => {
-          this.fetchRepos();
+          this.fetchWatchedRepos();
         },
       );
     },
 
-    async fetchRepos(): Promise<void> {
+    async fetchWatchedRepos(): Promise<void> {
       if (!this.enabled) return;
       this.loading = true;
       try {
-        const orgs: GitHubOrganizations = await GitHubService.getCachedRepos();
-        const orgSections: Record<string, OrgSection> = {};
-        for (const [orgName, repos] of Object.entries(orgs)) {
-          orgSections[orgName] = {
-            repos: repos.map((repo) => ({
-              repo,
-              pulls: [],
-              actions: [],
-              pullsLoading: false,
-              actionsLoading: false,
-              expanded: false,
-            })),
-            expanded: false,
-          };
-        }
-        this.organizations = orgSections;
-        // Also fetch pulls and actions for all repos in the background
-        for (const [orgName, org] of Object.entries(orgSections)) {
-          for (const entry of org.repos) {
-            this.fetchPulls(orgName, entry.repo.name);
-            this.fetchActions(orgName, entry.repo.name);
-          }
-        }
+        const entries = await GitHubService.getWatchedRepos();
+        this.watchedRepos = entries;
+        this.lastUpdated = Date.now();
       } catch (err) {
         handleError(err);
       } finally {
@@ -97,56 +57,52 @@ export const GitHubStore = defineStore("GitHubStore", {
       }
     },
 
-    async toggleOrg(orgName: string): Promise<void> {
-      const org = this.organizations[orgName];
-      if (!org) return;
-      org.expanded = !org.expanded;
+    async addRepo(org: string, repo: string): Promise<void> {
+      try {
+        await GitHubService.addWatchedRepo(org, repo);
+        await this.fetchWatchedRepos();
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "info",
+          text: `Added ${org}/${repo} to watch list`,
+        });
+      } catch (err) {
+        handleError(err);
+      }
     },
 
-    async toggleRepo(orgName: string, repoName: string): Promise<void> {
-      const org = this.organizations[orgName];
-      if (!org) return;
-      const entry = org.repos.find((r) => r.repo.name === repoName);
-      if (!entry) return;
+    async removeRepo(org: string, repo: string): Promise<void> {
+      try {
+        await GitHubService.removeWatchedRepo(org, repo);
+        await this.fetchWatchedRepos();
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "info",
+          text: `Removed ${org}/${repo} from watch list`,
+        });
+      } catch (err) {
+        handleError(err);
+      }
+    },
+
+    async refreshActions(org: string, repo: string): Promise<void> {
+      try {
+        await GitHubService.refreshActions(org, repo);
+        // After refresh, re-fetch watched repos to get updated data
+        await this.fetchWatchedRepos();
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "info",
+          text: `Actions refreshed for ${org}/${repo}`,
+        });
+      } catch (err) {
+        handleError(err);
+      }
+    },
+
+    toggleRepo(entry: WatchedRepoEntry): void {
       entry.expanded = !entry.expanded;
-      if (entry.expanded) {
-        if (entry.pulls.length === 0) {
-          await this.fetchPulls(orgName, repoName);
-        }
-        if (entry.actions.length === 0) {
-          await this.fetchActions(orgName, repoName);
-        }
-      }
     },
 
-    async fetchPulls(orgName: string, repoName: string): Promise<void> {
-      const org = this.organizations[orgName];
-      if (!org) return;
-      const entry = org.repos.find((r) => r.repo.name === repoName);
-      if (!entry) return;
-      entry.pullsLoading = true;
-      try {
-        entry.pulls = await GitHubService.getCachedPulls(orgName, repoName);
-      } catch (err) {
-        handleError(err);
-      } finally {
-        entry.pullsLoading = false;
-      }
-    },
-
-    async fetchActions(orgName: string, repoName: string): Promise<void> {
-      const org = this.organizations[orgName];
-      if (!org) return;
-      const entry = org.repos.find((r) => r.repo.name === repoName);
-      if (!entry) return;
-      entry.actionsLoading = true;
-      try {
-        entry.actions = await GitHubService.getCachedActions(orgName, repoName);
-      } catch (err) {
-        handleError(err);
-      } finally {
-        entry.actionsLoading = false;
-      }
+    toggleActions(entry: WatchedRepoEntry): void {
+      entry.actionsExpanded = !entry.actionsExpanded;
     },
 
     async cloneRepo(orgName: string, repoName: string): Promise<void> {
@@ -174,8 +130,7 @@ export const GitHubStore = defineStore("GitHubStore", {
           type: "info",
           text: `PR created in ${orgName}/${repoName}`,
         });
-        // Refresh pulls
-        await this.fetchPulls(orgName, repoName);
+        await this.fetchWatchedRepos();
       } catch (err) {
         handleError(err);
       }
@@ -192,8 +147,7 @@ export const GitHubStore = defineStore("GitHubStore", {
           type: "info",
           text: `PR #${prNumber} merged in ${orgName}/${repoName}`,
         });
-        // Refresh pulls
-        await this.fetchPulls(orgName, repoName);
+        await this.fetchWatchedRepos();
       } catch (err) {
         handleError(err);
       }

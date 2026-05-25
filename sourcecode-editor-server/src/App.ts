@@ -27,7 +27,6 @@ import { GitHubRoutes } from "./github/GitHubRoutes";
 import { GitHubCacheInit } from "./github/GitHubCache";
 import { GitHubCacheRoutes } from "./github/GitHubCacheRoutes";
 import { GitHubMetricsInit } from "./github/GitHubMetrics";
-import { SourceCodeMetricsInit } from "./metrics/SourceCodeMetrics";
 
 const logger = OTelLogger().createModuleLogger("app");
 
@@ -55,7 +54,6 @@ Promise.resolve().then(async () => {
   await ProjectsSyncInit(span, config);
   await FilesInit(span, config);
   await GitHubMetricsInit(span, config);
-  await SourceCodeMetricsInit(span);
   await GitHubCacheInit(span, config);
 
   span.end();
