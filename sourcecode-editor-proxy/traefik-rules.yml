@@ -1,0 +1,20 @@
+http:
+  routers:
+    web:
+      service: service-web
+      rule: PathPrefix(`/`)
+    server:
+      # The /api/ prefix also matches the WebSocket endpoint /api/events/ws.
+      # Traefik upgrades HTTP/1.1 connections automatically; no extra rule needed.
+      service: service-server
+      rule: PathPrefix(`/api/`)
+
+  services:
+    service-web:
+      loadBalancer:
+        servers:
+          - url: http://localhost:3000/
+    service-server:
+      loadBalancer:
+        servers:
+          - url: http://localhost:8080/

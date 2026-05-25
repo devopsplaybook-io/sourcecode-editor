@@ -1,0 +1,40 @@
+@import "@picocss/pico/css/pico.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* =============================================
+   Design Tokens - Semantic CSS Variables
+   ============================================= */
+:root {
+  /* --- Font Sizes --- */
+  --font-label: 0.65rem; /* Badges, status labels */
+  --font-meta: 0.75rem; /* Timestamps, secondary metadata */
+  --font-body: 0.85rem; /* Body text, buttons, descriptions */
+  --font-body-large: 1rem; /* Standard text, heading size */
+  --font-icon: 0.9rem; /* Standard icon size */
+  --font-icon-large: 1.1rem; /* Larger icons */
+  --font-icon-xl: 2rem; /* Extra large icons */
+
+  /* --- Spacing: Gap --- */
+  --gap-tight: 0.25rem; /* Minimal spacing (inline elements) */
+  --gap-inline: 0.5rem; /* Standard flex/grid gaps */
+  --gap-section: 0.75rem; /* Between sections */
+  --gap-layout: 1rem; /* Layout-level gaps */
+  --gap-wide: 1.5rem; /* Wide spacing */
+
+  /* --- Spacing: Padding --- */
+  --pad-tight: 0.25rem; /* Compact inner spacing */
+  --pad-inline: 0.5rem; /* Standard inner padding */
+  --pad-section: 0.75rem; /* Card/content section padding */
+  --pad-container: 1rem; /* Container/card outer padding */
+  --pad-page: 2rem; /* Page-level section padding */
+  --pad-button-sm: 0.15rem 0.4rem; /* Small button padding */
+  --pad-button: 0.5rem 0.8rem; /* Standard button padding */
+
+  /* --- Border Radius --- */
+  --radius-default: 8px; /* Card/container border radius */
+
+  /* --- Opacity --- */
+  --opacity-muted: 0.6; /* Muted secondary text */
+  --opacity-hover: 1; /* Full opacity on hover */
+  --opacity-disabled: 0.3; /* Disabled/inactive elements */
+}

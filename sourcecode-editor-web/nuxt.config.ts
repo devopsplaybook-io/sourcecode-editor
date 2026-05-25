@@ -1,0 +1,47 @@
+// https://nuxt.com/docs/api/configuration/nuxt-config
+export default defineNuxtConfig({
+  ssr: false,
+  app: {
+    head: {
+      charset: "utf-16",
+      viewport:
+        "width=device-width, initial-scale=1, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+      title: "Code",
+      meta: [
+        { name: "description", content: "sourcecode-editor" },
+        { name: "theme-color", content: "#212121" },
+      ],
+      link: [
+        { rel: "icon", href: "/icon.png" },
+        { rel: "stylesheet", href: "/styles.css" },
+      ],
+    },
+  },
+  css: ["~/assets/css/main.css"],
+  modules: ["@pinia/nuxt", "@vite-pwa/nuxt"],
+  imports: {
+    dirs: ["./stores"],
+  },
+  pinia: {
+    autoImports: ["defineStore", "acceptHMRUpdate"],
+  },
+  pwa: {
+    // PWA options
+    manifest: {
+      name: "APPLICATION_TITLE",
+      short_name: "APPLICATION_TITLE",
+      lang: "en-US",
+      start_url: "/",
+      display: "standalone",
+      background_color: "#12191f",
+      theme_color: "#12191f",
+      icons: [
+        {
+          src: "images/icon.png",
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+    },
+  },
+});
