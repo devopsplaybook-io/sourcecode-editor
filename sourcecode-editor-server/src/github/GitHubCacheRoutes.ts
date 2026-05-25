@@ -51,10 +51,11 @@ export class GitHubCacheRoutes {
           const { org, repo } = watched;
           // Find repo info from cached repos
           const orgData = orgRepos[org] || [];
-          const repoInfo = orgData.find(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (r: any) => r.name === repo,
-          ) || null;
+          const repoInfo =
+            orgData.find(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (r: any) => r.name === repo,
+            ) || null;
 
           // Read pulls
           let pulls: unknown[] = [];
