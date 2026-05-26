@@ -25,6 +25,10 @@
         <select
           class="branch-select"
           :value="project.status.currentBranch"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
           @change="onBranchSelect(project, $event)"
         >
           <option
@@ -37,37 +41,77 @@
         </select>
       </div>
       <div class="action-controls">
-        <NuxtLink :to="'/projects/' + project.projectId"
+        <button
+          v-if="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          disabled
+        >
+          <i class="bi bi-pencil-square"></i> Edit
+        </button>
+        <NuxtLink v-else :to="'/projects/' + project.projectId"
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
         <button
           v-if="project.status?.branchStatus?.behind > 0"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
           @click="pullProject(project)"
         >
           Pull ({{ project.status?.branchStatus?.behind }} behind)
         </button>
         <button
           v-if="project.status?.filesUpdateStatus?.length > 0"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
           @click="commitProject(project)"
         >
           Commit
         </button>
         <button
           v-if="project.status?.branchStatus?.ahead > 0"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
           @click="pushProject(project)"
         >
           Push ({{ project.status?.branchStatus?.ahead }} ahead)
         </button>
-        <button v-if="!project.status" @click="cloneProject(project)">
+        <button
+          v-if="!project.status"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          @click="cloneProject(project)"
+        >
           Clone
         </button>
         <!-- New buttons for branch creation and deletion -->
-        <button @click="openCreateBranchDialog(project)">Create Branch</button>
+        <button
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          @click="openCreateBranchDialog(project)"
+        >
+          Create Branch
+        </button>
         <button
           v-if="
             project.status?.currentBranch &&
             project.status.currentBranch != 'main' &&
             project.status.currentBranch != 'master'
+          "
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
           "
           @click="deleteBranch(project)"
         >

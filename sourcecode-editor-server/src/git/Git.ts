@@ -3,7 +3,7 @@ import { Project } from "../model/Project";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import { Config } from "../Config";
 import { SystemCommandExecute } from "../utils-std-ts/SystemCommand";
-import { ensureDir, remove } from "fs-extra";
+import { ensureDir, remove, writeFile } from "fs-extra";
 import path from "path";
 import { SSHGetPrivateKeyPath } from "../ssh/SSH";
 import { FileUpdateStatus } from "../model/FileUpdateStatus";
@@ -187,27 +187,41 @@ export async function GitCommit(
 ): Promise<void> {
   const span = OTelTracer().startSpan("GitCommit", context);
   try {
+    if (!files || files.length === 0) {
+      throw new Error("No files selected for commit");
+    }
+    if (!message || message.trim().length === 0) {
+      throw new Error("Commit message is required");
+    }
     logger.info(
       `Committing files: ${files.join(", ")} with message: "${message}"`,
       span,
     );
-    if (files.length > 0) {
-      const filesArg = files.map((f) => `"${f}"`).join(" ");
-      // Use `git add -A -- <files>` so that deletions are also staged.
-      // Plain `git add <file>` fails when the file no longer exists on disk.
-      await SystemCommandExecute(
-        span,
-        `${await GitEnv(span)} && cd ${projectParentFolder}/${
-          project.projectId
-        } && git add -A -- ${filesArg}`,
-      );
-    }
+    const filesArg = files.map((f) => `"${f}"`).join(" ");
+    // Use `git add -A -- <files>` so that deletions are also staged.
+    // Plain `git add <file>` fails when the file no longer exists on disk.
     await SystemCommandExecute(
       span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
-      } && git commit -m "${message.replace(/"/g, '\\"')}"`,
+      } && git add -A -- ${filesArg}`,
     );
+    // Write the commit message to a temporary file to avoid shell-injection
+    // issues with special characters (backticks, $, !, quotes, etc.).
+    const tmpMessageFile = `/tmp/git-commit-msg-${project.projectId}-${Date.now()}`;
+    await writeFile(tmpMessageFile, message, "utf-8");
+    await SystemCommandExecute(
+      span,
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git commit -F "${tmpMessageFile}"`,
+    );
+    // Clean up the temporary file.
+    try {
+      await remove(tmpMessageFile);
+    } catch {
+      // Best-effort cleanup; ignore if file was already removed.
+    }
     span.end();
   } catch (err) {
     logger.error(`Failed to commit`, err, span);

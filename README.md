@@ -76,5 +76,3 @@ See the [ConfigMap YAML](docs/deployments/kubernetes/sourcecode-editor/base/conf
 ## Development
 
 See the [Development Guide](docs/dev/README.md) for instructions on setting up a development environment.
-
-test
