@@ -98,6 +98,20 @@ export default {
       this.$emit("onClose", {});
     },
     async commit() {
+      if (!this.selectedFiles || this.selectedFiles.length === 0) {
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "error",
+          text: "Please select at least one file to commit",
+        });
+        return;
+      }
+      if (!this.commitMessage || this.commitMessage.trim().length === 0) {
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "error",
+          text: "Please enter a commit message",
+        });
+        return;
+      }
       axios
         .post(
           `${(await Config.get()).SERVER_URL}/projects/${

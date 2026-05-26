@@ -13,6 +13,7 @@ export const GitProjectsStore = defineStore("GitProjectsStore", {
   state: () => ({
     projects: [] as ProjectEntry[],
     eventsBound: false,
+    fetching: false,
   }),
   getters: {},
   actions: {
@@ -87,28 +88,33 @@ export const GitProjectsStore = defineStore("GitProjectsStore", {
 
     async fetch(): Promise<void> {
       this.bindEvents();
-      await axios
-        .get(
-          `${(await Config.get()).SERVER_URL}/projects`,
-          await AuthService.getAuthHeader(),
-        )
-        .then(async (res) => {
-          this.projects = res.data.projects;
-          this.projects.forEach(async (project: ProjectEntry) => {
-            axios
-              .get(
-                `${(await Config.get()).SERVER_URL}/projects/${
-                  project.projectId
-                }/status`,
-                await AuthService.getAuthHeader(),
-              )
-              .then(async (statusRes) => {
-                project.status = statusRes.data.status;
-              })
-              .catch(handleError);
-          });
-        })
-        .catch(handleError);
+      this.fetching = true;
+      try {
+        await axios
+          .get(
+            `${(await Config.get()).SERVER_URL}/projects`,
+            await AuthService.getAuthHeader(),
+          )
+          .then(async (res) => {
+            this.projects = res.data.projects;
+            this.projects.forEach(async (project: ProjectEntry) => {
+              axios
+                .get(
+                  `${(await Config.get()).SERVER_URL}/projects/${
+                    project.projectId
+                  }/status`,
+                  await AuthService.getAuthHeader(),
+                )
+                .then(async (statusRes) => {
+                  project.status = statusRes.data.status;
+                })
+                .catch(handleError);
+            });
+          })
+          .catch(handleError);
+      } finally {
+        this.fetching = false;
+      }
     },
   },
 });

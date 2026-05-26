@@ -16,8 +16,8 @@ export class AuthService {
     await localStorage.setItem(AUTH_TOKEN_KEY, token);
   }
 
-  public static async removeToken(token: string): Promise<void> {
-    await localStorage.removeItem(AUTH_TOKEN_KEY);
+  public static async removeToken(): Promise<void> {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   }
 
   public static async getToken() {
