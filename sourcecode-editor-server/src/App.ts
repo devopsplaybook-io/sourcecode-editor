@@ -53,7 +53,7 @@ Promise.resolve().then(async () => {
   await SSHInit(span, config);
   await ProjectsSyncInit(span, config);
   await FilesInit(span, config);
-  await GitHubMetricsInit(span, config);
+  await GitHubMetricsInit(span);
   await GitHubCacheInit(span, config);
 
   span.end();
