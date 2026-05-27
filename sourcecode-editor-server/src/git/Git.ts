@@ -7,8 +7,6 @@ import { ensureDir, remove, writeFile } from "fs-extra";
 import path from "path";
 import { SSHGetPrivateKeyPath } from "../ssh/SSH";
 import { FileUpdateStatus } from "../model/FileUpdateStatus";
-import { GitProjectClone } from "../github/GitHubMetrics";
-
 const logger = OTelLogger().createModuleLogger("Git");
 let config: Config;
 let projectParentFolder = "";
@@ -37,7 +35,6 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
         project.info.url
       } ${projectParentFolder}/${project.projectId}`,
     );
-    GitProjectClone(project.projectId);
   } catch (err) {
     logger.error(`Failed to clone project`, err, span);
     throw err;
