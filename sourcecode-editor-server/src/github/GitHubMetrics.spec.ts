@@ -1,27 +1,35 @@
-import {
-  GitHubMetricsInit,
-  GitHubRepoAdded,
-  GitProjectClone,
-} from "./GitHubMetrics";
+import * as path from "path";
+import * as os from "os";
+import * as fse from "fs-extra";
+import { GitHubMetricsInit } from "./GitHubMetrics";
 
-// Capture counter .add() calls
-const counterAdds = new Map<
+// Capture observable gauge registrations.
+const gaugeCallbacks = new Map<
   string,
-  { value: number; attributes: Record<string, string> }[]
+  {
+    callback: (observableResult: {
+      observe: (value: number, attributes: Record<string, string>) => void;
+    }) => void;
+    description: string;
+  }
 >();
 
-function createMockCounter(name: string) {
-  const adds: { value: number; attributes: Record<string, string> }[] = [];
-  counterAdds.set(name, adds);
-  return {
-    add(value: number, attributes: Record<string, string>) {
-      adds.push({ value, attributes });
-    },
-  };
-}
-
 const mockMeter = {
-  createCounter: (name: string) => createMockCounter(name),
+  createObservableGauge: jest.fn(
+    (
+      key: string,
+      callback: (observableResult: {
+        observe: (value: number, attributes: Record<string, string>) => void;
+      }) => void,
+      description?: string,
+    ) => {
+      gaugeCallbacks.set(key, {
+        callback,
+        description: description || "",
+      });
+      return {};
+    },
+  ),
 };
 
 const mockTracer = {
@@ -42,84 +50,334 @@ jest.mock("../OTelContext", () => ({
   }),
 }));
 
+jest.mock("./WatchedRepos", () => ({
+  WatchedReposInit: jest.fn(),
+  getWatchedRepos: jest.fn(),
+}));
+
+jest.mock("./GitHubApi", () => ({
+  GitHubSetToken: jest.fn(),
+  GitHubIsEnabled: jest.fn().mockReturnValue(true),
+}));
+
+import { getWatchedRepos, WatchedReposInit } from "./WatchedRepos";
+import { GitHubIsEnabled, GitHubSetToken } from "./GitHubApi";
+
+let testDir: string;
+
 beforeEach(() => {
-  counterAdds.clear();
+  testDir = path.join(
+    os.tmpdir(),
+    `github-metrics-test-${Date.now()}-${Math.random()}`,
+  );
+  gaugeCallbacks.clear();
+  jest.clearAllMocks();
+  // Default: no watched repos (empty list) so that init doesn't crash.
+  (getWatchedRepos as jest.Mock).mockResolvedValue([]);
+  jest.useFakeTimers();
 });
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
+afterEach(async () => {
+  jest.useRealTimers();
+  await fse.remove(testDir);
+});
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 describe("GitHubMetrics", () => {
   describe("GitHubMetricsInit", () => {
-    test("should create both counters on init", async () => {
-      await GitHubMetricsInit(null as any);
+    test("should create three observable gauges on init", async () => {
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
 
-      expect(counterAdds.has("github.repo.added")).toBe(true);
-      expect(counterAdds.has("git.project.clone")).toBe(true);
+      expect(gaugeCallbacks.has("github.actions.success.rate")).toBe(true);
+      expect(gaugeCallbacks.has("github.prs.open")).toBe(true);
+      expect(gaugeCallbacks.has("github.branches")).toBe(true);
+    });
+
+    test("should initialise WatchedRepos and set token from config", async () => {
+      (WatchedReposInit as jest.Mock).mockClear();
+
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "ghp_test_token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      expect(WatchedReposInit).toHaveBeenCalledWith(config);
+
+      expect(GitHubSetToken).toHaveBeenCalledWith("ghp_test_token");
     });
   });
 
-  describe("GitHubRepoAdded", () => {
-    test("should increment github.repo.added counter with org and repo attributes", async () => {
-      await GitHubMetricsInit(null as any);
+  describe("observable gauges - actions success rate", () => {
+    test("should report success rate from cached actions data", async () => {
+      // Setup: create cached actions file
+      const actionsDir = path.join(testDir, "github/actions/org1");
+      await fse.ensureDir(actionsDir);
+      await fse.writeJson(path.join(actionsDir, "repo1.json"), [
+        { conclusion: "success" },
+        { conclusion: "success" },
+        { conclusion: "failure" },
+        { conclusion: "cancelled" },
+        { conclusion: null }, // in-progress, not completed
+      ]);
 
-      GitHubRepoAdded("myorg", "myrepo");
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "org1", repo: "repo1" },
+      ]);
 
-      const adds = counterAdds.get("github.repo.added");
-      expect(adds).toBeDefined();
-      expect(adds).toHaveLength(1);
-      expect(adds![0]).toEqual({
-        value: 1,
-        attributes: { org: "myorg", repo: "myrepo" },
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // Trigger the observable gauge callback for actions
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const gaugeEntry = gaugeCallbacks.get("github.actions.success.rate")!;
+      const observations: {
+        value: number;
+        attributes: Record<string, string>;
+      }[] = [];
+      gaugeEntry.callback({
+        observe(value: number, attributes: Record<string, string>) {
+          observations.push({ value, attributes });
+        },
+      });
+
+      expect(observations).toHaveLength(1);
+      expect(observations[0].value).toBeCloseTo(0.5, 5); // 2 success / 4 completed
+      expect(observations[0].attributes).toEqual({
+        org: "org1",
+        repo: "repo1",
       });
     });
 
-    test("should allow multiple increments", async () => {
-      await GitHubMetricsInit(null as any);
+    test("should handle empty actions list", async () => {
+      const actionsDir = path.join(testDir, "github/actions/org1");
+      await fse.ensureDir(actionsDir);
+      await fse.writeJson(path.join(actionsDir, "repo1.json"), []);
 
-      GitHubRepoAdded("org1", "repo1");
-      GitHubRepoAdded("org1", "repo2");
-      GitHubRepoAdded("org2", "repo1");
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "org1", repo: "repo1" },
+      ]);
 
-      const adds = counterAdds.get("github.repo.added");
-      expect(adds).toBeDefined();
-      expect(adds).toHaveLength(3);
-      expect(adds![0]).toEqual({
-        value: 1,
-        attributes: { org: "org1", repo: "repo1" },
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const gaugeEntry = gaugeCallbacks.get("github.actions.success.rate")!;
+      const observations: {
+        value: number;
+        attributes: Record<string, string>;
+      }[] = [];
+      gaugeEntry.callback({
+        observe(value: number, attributes: Record<string, string>) {
+          observations.push({ value, attributes });
+        },
       });
-      expect(adds![1]).toEqual({
-        value: 1,
-        attributes: { org: "org1", repo: "repo2" },
+
+      expect(observations).toHaveLength(1);
+      expect(observations[0].value).toBe(0);
+    });
+
+    test("should report rate per repo across multiple watched repos", async () => {
+      // Setup actions dirs
+      await fse.ensureDir(path.join(testDir, "github/actions/org1"));
+      await fse.ensureDir(path.join(testDir, "github/actions/org2"));
+      await fse.writeJson(
+        path.join(testDir, "github/actions/org1/repoA.json"),
+        [{ conclusion: "success" }, { conclusion: "success" }],
+      );
+      await fse.writeJson(
+        path.join(testDir, "github/actions/org2/repoB.json"),
+        [{ conclusion: "failure" }, { conclusion: "success" }],
+      );
+
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "org1", repo: "repoA" },
+        { org: "org2", repo: "repoB" },
+      ]);
+
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const gaugeEntry = gaugeCallbacks.get("github.actions.success.rate")!;
+      const observations: {
+        value: number;
+        attributes: Record<string, string>;
+      }[] = [];
+      gaugeEntry.callback({
+        observe(value: number, attributes: Record<string, string>) {
+          observations.push({ value, attributes });
+        },
       });
-      expect(adds![2]).toEqual({
-        value: 1,
-        attributes: { org: "org2", repo: "repo1" },
+
+      expect(observations).toHaveLength(2);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const org1Obs = observations.find((o) => o.attributes.org === "org1")!;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const org2Obs = observations.find((o) => o.attributes.org === "org2")!;
+      expect(org1Obs.value).toBe(1); // 2/2 success
+      expect(org2Obs.value).toBe(0.5); // 1/2 success
+    });
+  });
+
+  describe("observable gauges - PR count", () => {
+    test("should report PR count from cached pulls data", async () => {
+      const pullsDir = path.join(testDir, "github/pulls/org1");
+      await fse.ensureDir(pullsDir);
+      await fse.writeJson(path.join(pullsDir, "repo1.json"), [
+        { number: 1, title: "PR 1" },
+        { number: 2, title: "PR 2" },
+        { number: 3, title: "PR 3" },
+      ]);
+
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "org1", repo: "repo1" },
+      ]);
+
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const gaugeEntry = gaugeCallbacks.get("github.prs.open")!;
+      const observations: {
+        value: number;
+        attributes: Record<string, string>;
+      }[] = [];
+      gaugeEntry.callback({
+        observe(value: number, attributes: Record<string, string>) {
+          observations.push({ value, attributes });
+        },
+      });
+
+      expect(observations).toHaveLength(1);
+      expect(observations[0].value).toBe(3);
+      expect(observations[0].attributes).toEqual({
+        org: "org1",
+        repo: "repo1",
       });
     });
   });
 
-  describe("GitProjectClone", () => {
-    test("should increment git.project.clone counter with projectId attribute", async () => {
-      await GitHubMetricsInit(null as any);
+  describe("observable gauges - branches count", () => {
+    test("should report branch count from cached branches data", async () => {
+      const branchesDir = path.join(testDir, "github/branches/org1");
+      await fse.ensureDir(branchesDir);
+      await fse.writeJson(path.join(branchesDir, "repo1.json"), {
+        count: 12,
+      });
 
-      GitProjectClone("project-abc-123");
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "org1", repo: "repo1" },
+      ]);
 
-      const adds = counterAdds.get("git.project.clone");
-      expect(adds).toBeDefined();
-      expect(adds).toHaveLength(1);
-      expect(adds![0]).toEqual({
-        value: 1,
-        attributes: { projectId: "project-abc-123" },
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const gaugeEntry = gaugeCallbacks.get("github.branches")!;
+      const observations: {
+        value: number;
+        attributes: Record<string, string>;
+      }[] = [];
+      gaugeEntry.callback({
+        observe(value: number, attributes: Record<string, string>) {
+          observations.push({ value, attributes });
+        },
+      });
+
+      expect(observations).toHaveLength(1);
+      expect(observations[0].value).toBe(12);
+      expect(observations[0].attributes).toEqual({
+        org: "org1",
+        repo: "repo1",
       });
     });
+  });
 
-    test("should allow multiple clone increments", async () => {
-      await GitHubMetricsInit(null as any);
+  describe("GitHub disabled", () => {
+    test("should skip stats update when GitHub is not enabled", async () => {
+      (GitHubIsEnabled as jest.Mock).mockReturnValue(false);
 
-      GitProjectClone("proj-1");
-      GitProjectClone("proj-2");
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
 
-      const adds = counterAdds.get("git.project.clone");
-      expect(adds).toHaveLength(2);
+      // Gauges should still be registered
+      expect(gaugeCallbacks.has("github.actions.success.rate")).toBe(true);
+      expect(gaugeCallbacks.has("github.prs.open")).toBe(true);
+      expect(gaugeCallbacks.has("github.branches")).toBe(true);
+    });
+  });
+
+  describe("missing cache files", () => {
+    test("should gracefully handle missing cache files", async () => {
+      (getWatchedRepos as jest.Mock).mockResolvedValue([
+        { org: "nonexistent", repo: "norepo" },
+      ]);
+
+      const config = {
+        DATA_DIR: testDir,
+        GITHUB_TOKEN: "token",
+        GITHUB_SYNC_FREQUENCY: 60000,
+      } as any;
+      await GitHubMetricsInit(null as any, config);
+
+      // All gauges should produce empty observations (no data)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const actionsEntry = gaugeCallbacks.get(
+        "github.actions.success.rate",
+      )!;
+      const actionsObs: any[] = [];
+      actionsEntry.callback({
+        observe: (v: number, a: any) => actionsObs.push({ v, a }),
+      });
+      expect(actionsObs).toHaveLength(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const prsEntry = gaugeCallbacks.get("github.prs.open")!;
+      const prsObs: any[] = [];
+      prsEntry.callback({
+        observe: (v: number, a: any) => prsObs.push({ v, a }),
+      });
+      expect(prsObs).toHaveLength(0);
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const branchesEntry = gaugeCallbacks.get("github.branches")!;
+      const branchesObs: any[] = [];
+      branchesEntry.callback({
+        observe: (v: number, a: any) => branchesObs.push({ v, a }),
+      });
+      expect(branchesObs).toHaveLength(0);
     });
   });
 });
