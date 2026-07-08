@@ -30,7 +30,6 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
     logger.info(`Cloning project: ${project.projectId} ${project.name}`, span);
     await remove(path.join(projectParentFolder, project.projectId));
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && git clone ${
         project.info.url
       } ${projectParentFolder}/${project.projectId}`,
@@ -55,7 +54,6 @@ export async function GitCheckout(
       span,
     );
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git checkout ${branch}`,
@@ -73,7 +71,6 @@ export async function GitPull(context: Span, project: Project): Promise<void> {
   try {
     logger.info(`Pulling: ${project.projectId} ${project.name}`, span);
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git pull`,
@@ -93,7 +90,6 @@ export async function GitListBranches(
   const span = OTelTracer().startSpan("GitListBranches", context);
   try {
     const gitCommandOutput = await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git branch -r`,
@@ -122,7 +118,6 @@ export async function GitListModifiedFiles(
   const span = OTelTracer().startSpan("GitListModifiedFiles", context);
   try {
     const gitCommandOutput = await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git status --porcelain`,
@@ -159,7 +154,6 @@ export async function GitGetBranchCurrent(
   const span = OTelTracer().startSpan("GitGetBranchCurrent", context);
   try {
     const gitCommandOutput = await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git branch`,
@@ -200,7 +194,6 @@ export async function GitCommit(
     // Use `git add -A -- <files>` so that deletions are also staged.
     // Plain `git add <file>` fails when the file no longer exists on disk.
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git add -A -- ${filesArg}`,
@@ -210,7 +203,6 @@ export async function GitCommit(
     const tmpMessageFile = `/tmp/git-commit-msg-${project.projectId}-${Date.now()}`;
     await writeFile(tmpMessageFile, message, "utf-8");
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git commit -F "${tmpMessageFile}"`,
@@ -234,7 +226,6 @@ export async function GitPush(context: Span, project: Project): Promise<void> {
   try {
     logger.info(`Pushing project: ${project.projectId} ${project.name}`, span);
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git push`,
@@ -255,7 +246,6 @@ export async function GitReset(context: Span, project: Project): Promise<void> {
       span,
     );
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git reset --hard`,
@@ -280,7 +270,6 @@ export async function GitCreateBranch(
       span,
     );
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectParentFolder}/${
         project.projectId
       } && git checkout -b ${branch} &&  git push --set-upstream origin ${branch} `,
@@ -308,7 +297,6 @@ export async function GitDeleteBranch(
     const gitEnv = await GitEnv(span);
     const projectPath = `${projectParentFolder}/${project.projectId}`;
     const branchList = await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git branch -a`,
     );
     let defaultBranch = "main";
@@ -316,11 +304,9 @@ export async function GitDeleteBranch(
       defaultBranch = "master";
     }
     await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git checkout ${defaultBranch}`,
     );
     await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git branch -D ${branch} && git push origin --delete ${branch}`,
     );
     span.end();
@@ -341,7 +327,6 @@ export async function GitGetFileFromHead(
     const projectPath = `${projectParentFolder}/${project.projectId}`;
     const safePath = filePath.replace(/"/g, '\\"');
     const content = await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectPath} && git show HEAD:"${safePath}"`,
     );
     span.end();
@@ -370,14 +355,12 @@ export async function GitDiscardFile(
     // Reset any staged changes for the file, then checkout from HEAD.
     // For untracked (new) files, remove the working tree file.
     await SystemCommandExecute(
-      span,
       `${await GitEnv(span)} && cd ${projectPath} && git reset -- "${safePath}" || true`,
     );
     // Check if file is tracked.
     let isTracked = true;
     try {
       await SystemCommandExecute(
-        span,
         `${await GitEnv(span)} && cd ${projectPath} && git ls-files --error-unmatch "${safePath}"`,
       );
     } catch {
@@ -385,14 +368,10 @@ export async function GitDiscardFile(
     }
     if (isTracked) {
       await SystemCommandExecute(
-        span,
         `${await GitEnv(span)} && cd ${projectPath} && git checkout HEAD -- "${safePath}"`,
       );
     } else {
-      await SystemCommandExecute(
-        span,
-        `cd ${projectPath} && rm -rf "${safePath}"`,
-      );
+      await SystemCommandExecute(`cd ${projectPath} && rm -rf "${safePath}"`);
     }
     span.end();
   } catch (err) {
@@ -412,12 +391,10 @@ export async function GitGetBranchStatus(
     const projectPath = `${projectParentFolder}/${project.projectId}`;
     const currentBranch = await GitGetBranchCurrent(span, project);
     await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git fetch origin`,
     );
     try {
       await SystemCommandExecute(
-        span,
         `${gitEnv} && cd ${projectPath} && git rev-parse --verify origin/${currentBranch}`,
       );
     } catch {
@@ -425,12 +402,10 @@ export async function GitGetBranchStatus(
       return { behind: 0, ahead: 0 };
     }
     const behindOutput = await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git rev-list --count HEAD..origin/${currentBranch}`,
     );
     const behind = parseInt(behindOutput.trim()) || 0;
     const aheadOutput = await SystemCommandExecute(
-      span,
       `${gitEnv} && cd ${projectPath} && git rev-list --count origin/${currentBranch}..HEAD`,
     );
     const ahead = parseInt(aheadOutput.trim()) || 0;
@@ -457,14 +432,8 @@ async function GitConfigUser(
       `Setting global git user: ${userName}, email: ${userEmail}`,
       span,
     );
-    await SystemCommandExecute(
-      span,
-      `git config --global user.name "${userName}"`,
-    );
-    await SystemCommandExecute(
-      span,
-      `git config --global user.email "${userEmail}"`,
-    );
+    await SystemCommandExecute(`git config --global user.name "${userName}"`);
+    await SystemCommandExecute(`git config --global user.email "${userEmail}"`);
     span.end();
   } catch (err) {
     logger.error(`Failed to set git user config`, err, span);

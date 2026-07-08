@@ -12,7 +12,8 @@ import {
 } from "./OTelContext";
 import { AuthInit } from "./users/Auth";
 import { UsersRoutes } from "./users/UsersRoutes";
-import { SqlDbUtilsInit } from "./utils-std-ts/SqlDbUtils";
+import { SqlDbUtilsSetOTel, SqlDbUtilsInit } from "./utils-std-ts/SqlDbUtils";
+import { DbUtilsNoTelemetrySetLogger } from "./utils-std-ts/SqlDbUtilsNoTelemetry";
 import { SSHInit } from "./ssh/SSH";
 import { SSHRoutes } from "./ssh/SSHRoutes";
 import { ProjectsRoutes } from "./projects/ProjectsRoutes";
@@ -45,9 +46,13 @@ Promise.resolve().then(async () => {
   OTelSetMeter(new StandardMeter(config));
   OTelLogger().initOTel(config);
 
-  const span = OTelTracer().startSpan("init");
+  SqlDbUtilsSetOTel(OTelTracer(), OTelLogger());
+  DbUtilsNoTelemetrySetLogger(OTelLogger());
 
-  await SqlDbUtilsInit(span, config);
+  const span = OTelTracer().startSpan("init");
+  const sqlDir = path.join(__dirname, "../sql");
+
+  await SqlDbUtilsInit(span, config, sqlDir);
   await AuthInit(span, config);
   await GitInit(span, config);
   await SSHInit(span, config);

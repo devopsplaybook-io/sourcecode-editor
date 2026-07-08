@@ -1,32 +1,29 @@
 import {
-  StandardLogger,
-  StandardMeter,
-  StandardTracer,
-} from "@devopsplaybook.io/otel-utils";
+  createOTelContext,
+  OTelContext,
+} from "@devopsplaybook.io/common-utils";
+import { StandardTracer, StandardMeter } from "@devopsplaybook.io/otel-utils";
 
-let tracer: StandardTracer;
-let meter: StandardMeter;
-let logger: StandardLogger;
+const otelContext: OTelContext = createOTelContext();
 
-export function OTelSetTracer(tracerIn: StandardTracer) {
-  tracer = tracerIn;
+export function OTelSetTracer(tracer: StandardTracer): void {
+  otelContext.OTelSetTracer(tracer);
 }
 
-export function OTelSetMeter(meterIn: StandardMeter) {
-  meter = meterIn;
+export function OTelSetMeter(meter: StandardMeter): void {
+  otelContext.OTelSetMeter(meter);
 }
 
 export function OTelTracer(): StandardTracer {
-  return tracer;
+  return otelContext.OTelTracer();
 }
 
 export function OTelMeter(): StandardMeter {
-  return meter;
+  return otelContext.OTelMeter();
 }
 
-export function OTelLogger(): StandardLogger {
-  if (!logger) {
-    logger = new StandardLogger();
-  }
-  return logger;
+export function OTelLogger() {
+  return otelContext.OTelLogger();
 }
+
+export { otelContext };
