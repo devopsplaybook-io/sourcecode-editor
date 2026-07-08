@@ -17,8 +17,6 @@ import { OTelLogger } from "../OTelContext";
 import { GitClone } from "../git/Git";
 import { EventBusEmit } from "../events/EventBus";
 import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
-import { GitHubRepoAdded } from "../github/GitHubMetrics";
-
 const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
 export class ProjectsRoutes {
   //
@@ -57,12 +55,6 @@ export class ProjectsRoutes {
       });
       await GitClone(OTelRequestSpan(req), project);
       await ProjectsSyncStartProject(OTelRequestSpan(req), project);
-
-      // Emit metric: GitHub repository added.
-      const { org, repo } = parseGitHubUrl(project.info?.url || "");
-      if (org && repo) {
-        GitHubRepoAdded(org, repo);
-      }
 
       res.status(201).send({});
     });
@@ -147,19 +139,4 @@ export class ProjectsRoutes {
       },
     );
   }
-}
-
-/**
- * Parse a GitHub repository URL to extract the organization and repository name.
- * Supports:
- *   - https://github.com/org/repo.git
- *   - https://github.com/org/repo
- *   - git@github.com:org/repo.git
- */
-function parseGitHubUrl(url: string): { org: string; repo: string } {
-  const match = url.match(/(?:github\.com[/:])?([^/]+)\/([^/]+?)(?:\.git)?$/);
-  if (match) {
-    return { org: match[1], repo: match[2] };
-  }
-  return { org: "", repo: "" };
 }
