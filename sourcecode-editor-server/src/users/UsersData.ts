@@ -8,11 +8,9 @@ import { OTelTracer } from "../OTelContext";
 
 export async function UsersDataGet(context: Span, id: string): Promise<User> {
   const span = OTelTracer().startSpan("UsersDataGet", context);
-  const usersRaw = await SqlDbUtilsQuerySQL(
-    span,
-    "SELECT * FROM users WHERE id=?",
-    [id]
-  );
+  const usersRaw = SqlDbUtilsQuerySQL(span, "SELECT * FROM users WHERE id=?", [
+    id,
+  ]);
   let user: User = null;
   if (usersRaw.length > 0) {
     user = fromRaw(usersRaw[0]);
@@ -23,13 +21,13 @@ export async function UsersDataGet(context: Span, id: string): Promise<User> {
 
 export async function UsersDataGetByName(
   context: Span,
-  name: string
+  name: string,
 ): Promise<User> {
   const span = OTelTracer().startSpan("UsersDataGetByName", context);
-  const usersRaw = await SqlDbUtilsQuerySQL(
+  const usersRaw = SqlDbUtilsQuerySQL(
     span,
     "SELECT * FROM users WHERE name=?",
-    [name]
+    [name],
   );
   let user: User = null;
   if (usersRaw.length > 0) {
@@ -41,7 +39,7 @@ export async function UsersDataGetByName(
 
 export async function UsersDataList(context: Span): Promise<User[]> {
   const span = OTelTracer().startSpan("UsersDataList", context);
-  const usersRaw = await SqlDbUtilsQuerySQL(span, "SELECT * FROM users");
+  const usersRaw = SqlDbUtilsQuerySQL(span, "SELECT * FROM users");
   const users = [];
   for (const userRaw of usersRaw) {
     users.push(fromRaw(userRaw));
@@ -52,23 +50,23 @@ export async function UsersDataList(context: Span): Promise<User[]> {
 
 export async function UsersDataAdd(context: Span, user: User): Promise<void> {
   const span = OTelTracer().startSpan("UsersDataAdd", context);
-  await SqlDbUtilsExecSQL(
+  SqlDbUtilsExecSQL(
     span,
     "INSERT INTO users (id,name,passwordEncrypted) VALUES (?, ?, ?)",
-    [user.id, user.name, user.passwordEncrypted]
+    [user.id, user.name, user.passwordEncrypted],
   );
   span.end();
 }
 
 export async function UsersDataUpdate(
   context: Span,
-  user: User
+  user: User,
 ): Promise<void> {
   const span = OTelTracer().startSpan("UsersDataUpdate", context);
-  await SqlDbUtilsExecSQL(
+  SqlDbUtilsExecSQL(
     span,
     "UPDATE users SET passwordEncrypted = ? WHERE id = ? ",
-    [user.passwordEncrypted, user.id]
+    [user.passwordEncrypted, user.id],
   );
   span.end();
 }

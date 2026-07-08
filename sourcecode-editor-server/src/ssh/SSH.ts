@@ -21,8 +21,7 @@ export async function SSHInit(context: Span, configIn: Config): Promise<void> {
   } catch {
     logger.info("Generating new SSH key pair", span);
     await SystemCommandExecute(
-      span,
-      `ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -q`
+      `ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -q`,
     );
     logger.info("SSH key pair generated.", span);
   }

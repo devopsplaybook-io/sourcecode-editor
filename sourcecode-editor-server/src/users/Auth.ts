@@ -14,16 +14,17 @@ let config: Config;
 export async function AuthInit(context: Span, configIn: Config) {
   config = configIn;
   const span = OTelTracer().startSpan("AuthInit", context);
-  const authKeyRaw = await SqlDbUtilsQuerySQL(
+  const authKeyRaw = SqlDbUtilsQuerySQL(
     span,
-    'SELECT * FROM metadata WHERE type="auth_token"',
+    "SELECT * FROM metadata WHERE type=?",
+    ["auth_token"],
   );
   if (authKeyRaw.length == 0) {
     configIn.JWT_KEY = uuidv4();
-    await SqlDbUtilsQuerySQL(
+    SqlDbUtilsQuerySQL(
       span,
-      'INSERT INTO metadata (type, value, dateCreated) VALUES ("auth_token", ?, ?)',
-      [configIn.JWT_KEY, new Date().toISOString()],
+      "INSERT INTO metadata (type, value, dateCreated) VALUES (?, ?, ?)",
+      ["auth_token", configIn.JWT_KEY, new Date().toISOString()],
     );
   } else {
     configIn.JWT_KEY = authKeyRaw[0].value;

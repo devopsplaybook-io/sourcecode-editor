@@ -8,13 +8,13 @@ import { OTelTracer } from "../OTelContext";
 
 export async function ProjectsDataGet(
   context: Span,
-  projectId: string
+  projectId: string,
 ): Promise<Project> {
   const span = OTelTracer().startSpan("ProjectsDataGet", context);
-  const projectsRaw = await SqlDbUtilsQuerySQL(
+  const projectsRaw = SqlDbUtilsQuerySQL(
     span,
     "SELECT * FROM projects WHERE projectId=?",
-    [projectId]
+    [projectId],
   );
   let project: Project = null;
   if (projectsRaw.length > 0) {
@@ -26,7 +26,7 @@ export async function ProjectsDataGet(
 
 export async function ProjectsDataList(context: Span): Promise<Project[]> {
   const span = OTelTracer().startSpan("ProjectsDataList", context);
-  const projectsRaw = await SqlDbUtilsQuerySQL(span, "SELECT * FROM projects");
+  const projectsRaw = SqlDbUtilsQuerySQL(span, "SELECT * FROM projects");
   const projects = [];
   for (const projectRaw of projectsRaw) {
     projects.push(new Project(projectRaw));
@@ -37,26 +37,26 @@ export async function ProjectsDataList(context: Span): Promise<Project[]> {
 
 export async function ProjectsDataAdd(
   context: Span,
-  project: Project
+  project: Project,
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsDataAdd", context);
-  await SqlDbUtilsExecSQL(
+  SqlDbUtilsExecSQL(
     span,
     "INSERT INTO projects (projectId,name,info) VALUES (?, ?, ?)",
-    [project.projectId, project.name, JSON.stringify(project.info)]
+    [project.projectId, project.name, JSON.stringify(project.info)],
   );
   span.end();
 }
 
 export async function ProjectsDataUpdate(
   context: Span,
-  project: Project
+  project: Project,
 ): Promise<void> {
   const span = OTelTracer().startSpan("ProjectsDataUpdate", context);
-  await SqlDbUtilsExecSQL(
+  SqlDbUtilsExecSQL(
     span,
     "UPDATE projects SET name = ?, info = ? WHERE projectId = ? ",
-    [project.name, JSON.stringify(project.info), project.projectId]
+    [project.name, JSON.stringify(project.info), project.projectId],
   );
   span.end();
 }
