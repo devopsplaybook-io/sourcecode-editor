@@ -42,6 +42,26 @@ export async function GitClone(context: Span, project: Project): Promise<void> {
   }
 }
 
+export async function GitRemoveProject(
+  context: Span,
+  project: Project,
+): Promise<void> {
+  const span = OTelTracer().startSpan("GitRemoveProject", context);
+  try {
+    logger.info(
+      `Removing local project: ${project.projectId} ${project.name}`,
+      span,
+    );
+    // Removes only the local clone. The remote repository is not touched.
+    await remove(path.join(projectParentFolder, project.projectId));
+    span.end();
+  } catch (err) {
+    logger.error(`Failed to remove local project`, err, span);
+    span.end();
+    throw err;
+  }
+}
+
 export async function GitCheckout(
   context: Span,
   project: Project,

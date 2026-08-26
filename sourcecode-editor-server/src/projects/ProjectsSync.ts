@@ -114,6 +114,19 @@ export async function ProjectsSyncStartProject(
   span.end();
 }
 
+export async function ProjectsSyncRemoveProject(
+  context: Span,
+  projectId: string,
+): Promise<void> {
+  const span = OTelTracer().startSpan("ProjectsSyncRemoveProject", context);
+  for (let i = projectStatuses.length - 1; i >= 0; i--) {
+    if (projectStatuses[i].projectId === projectId) {
+      projectStatuses.splice(i, 1);
+    }
+  }
+  span.end();
+}
+
 export async function ProjectsSyncGetStatusProject(
   context: Span,
   projectId: string,
