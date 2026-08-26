@@ -5,16 +5,18 @@ import {
   ProjectsDataAdd,
   ProjectsDataGet,
   ProjectsDataList,
+  ProjectsDataRemove,
   ProjectsDataUpdate,
 } from "./ProjectsData";
 import { AuthGetUserSession } from "../users/Auth";
 import {
   ProjectsSyncGetStatusProject,
+  ProjectsSyncRemoveProject,
   ProjectsSyncStart,
   ProjectsSyncStartProject,
 } from "./ProjectsSync";
 import { OTelLogger } from "../OTelContext";
-import { GitClone } from "../git/Git";
+import { GitClone, GitRemoveProject } from "../git/Git";
 import { EventBusEmit } from "../events/EventBus";
 import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
 const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
@@ -102,6 +104,36 @@ export class ProjectsRoutes {
       });
       res.status(200).send({});
     });
+
+    fastify.delete<{ Params: { projectId: string } }>(
+      "/:projectId",
+      async (req, res) => {
+        if (!(await AuthGetUserSession(req)).isAuthenticated) {
+          return res.status(403).send({ error: "Access Denied" });
+        }
+        const project = await ProjectsDataGet(
+          OTelRequestSpan(req),
+          req.params.projectId,
+        );
+        if (!project) {
+          return res.status(404).send({ error: "Project Not Found" });
+        }
+        // Removes the project from the application only: the DB entry and
+        // the local clone. The remote repository is never deleted.
+        await ProjectsDataRemove(OTelRequestSpan(req), project.projectId);
+        await ProjectsSyncRemoveProject(
+          OTelRequestSpan(req),
+          project.projectId,
+        );
+        await GitRemoveProject(OTelRequestSpan(req), project);
+        EventBusEmit({
+          repository: project.projectId,
+          eventType: RepositoryEventTypes.PROJECT_DELETED,
+          eventDetail: { project },
+        });
+        res.status(200).send({});
+      },
+    );
 
     fastify.get<{ Params: { projectId: string } }>(
       "/:projectId/status",
