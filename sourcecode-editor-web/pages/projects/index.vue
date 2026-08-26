@@ -117,6 +117,17 @@
         >
           Delete Branch
         </button>
+        <button
+          class="secondary"
+          :title="'Remove ' + project.name + ' from the application'"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          @click="removeProject(project)"
+        >
+          <i class="bi bi-trash"></i> Remove
+        </button>
       </div>
     </article>
     <DialogCommit
@@ -292,6 +303,28 @@ export default {
             text: "Branch deleted: " + branch,
           });
           // git.branch.deleted + git.status.changed will refresh the store.
+        })
+        .catch(handleError);
+    },
+    async removeProject(project) {
+      if (
+        !confirm(
+          `Remove repository "${project.name}" from the application? ` +
+            "The remote repository is not deleted; only its local copy and entry are removed.",
+        )
+      )
+        return;
+      await axios
+        .delete(
+          `${(await Config.get()).SERVER_URL}/projects/${project.projectId}`,
+          await AuthService.getAuthHeader(),
+        )
+        .then(() => {
+          EventBus.emit(EventTypes.ALERT_MESSAGE, {
+            type: "info",
+            text: "Repository removed: " + project.name,
+          });
+          // project.deleted event will remove it from the store.
         })
         .catch(handleError);
     },
