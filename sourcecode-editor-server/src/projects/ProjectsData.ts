@@ -60,3 +60,14 @@ export async function ProjectsDataUpdate(
   );
   span.end();
 }
+
+export async function ProjectsDataRemove(
+  context: Span,
+  projectId: string,
+): Promise<void> {
+  const span = OTelTracer().startSpan("ProjectsDataRemove", context);
+  SqlDbUtilsExecSQL(span, "DELETE FROM projects WHERE projectId = ?", [
+    projectId,
+  ]);
+  span.end();
+}
