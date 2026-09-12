@@ -1,13 +1,13 @@
 import { Span } from "@opentelemetry/sdk-trace-base";
 import * as fse from "fs-extra";
 import * as path from "path";
-import { Config } from "../Config";
+import { Config, ConfigGitHubTokens } from "../Config";
 import {
   GitHubGetRepoInfo,
   GitHubListPulls,
   GitHubGetLatestActions,
   GitHubListBranches,
-  GitHubSetToken,
+  GitHubSetTokens,
   GitHubIsEnabled,
   GitHubRepo,
 } from "./GitHubApi";
@@ -31,10 +31,8 @@ export async function GitHubCacheInit(
 
   WatchedReposInit(config);
 
-  // Sync token from config
-  if (config.GITHUB_TOKEN) {
-    GitHubSetToken(config.GITHUB_TOKEN);
-  }
+  // Sync tokens from config
+  GitHubSetTokens(ConfigGitHubTokens(config));
 
   // Initial cache refresh after startup
   await GitHubCacheRefresh(span);

@@ -95,7 +95,8 @@ sourcecode-editor/
 
 ## Architecture Notes
 
-- **Config**: Extends `ConfigBase` (3-layer: env > config.json > defaults). Project-specific fields: `PROJECTS_SYNC_FREQUENCY`, `GIT_USERNAME`, `GIT_EMAIL`, `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`, `GITHUB_TOKEN`, `GITHUB_SYNC_FREQUENCY`.
+- **Config**: Extends `ConfigBase` (3-layer: env > config.json > defaults). Project-specific fields: `PROJECTS_SYNC_FREQUENCY`, `GIT_USERNAME`, `GIT_EMAIL`, `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`, `GITHUB_TOKEN`, `GITHUB_TOKENS`, `GITHUB_SYNC_FREQUENCY`.
+- **GitHub multi-token**: `GITHUB_TOKEN` (legacy single token) and `GITHUB_TOKENS` (JSON array) are merged by `ConfigGitHubTokens(config)` into an ordered, deduplicated list synced into `GitHubApi` via `GitHubSetTokens()`. `GitHubListRepos()` merges `/user/repos` across all tokens (dedupe by repo id); repo-scoped calls resolve the token per owner (cache with 401/403/404 fallback).
 - **OTelContext**: Wraps `createOTelContext()` from common-utils. Exports backward-compatible functions (`OTelLogger()`, `OTelTracer()`, `OTelMeter()`, `OTelSetTracer()`, `OTelSetMeter()`).
 - **DB initialization**: `App.ts` calls `SqlDbUtilsSetOTel()` and `DbUtilsNoTelemetrySetLogger()` before `SqlDbUtilsInit(span, config, sqlDir)`.
 - **SQL migrations**: Files in `sql/` named `init-NNNN.sql`. Applied in order; tracked in `metadata` table.
@@ -107,7 +108,7 @@ cd sourcecode-editor-server
 npm install
 npm run build    # tsc -> dist/ (must succeed with 0 errors)
 npm run lint     # eslint src (must pass with 0 errors)
-npm run test     # jest --coverage (all 28 tests must pass)
+npm run test     # jest --coverage (all tests must pass)
 ```
 
 All three commands must pass before committing.

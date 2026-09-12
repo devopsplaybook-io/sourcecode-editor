@@ -19,8 +19,8 @@
     <div v-if="!store.enabled" class="github-disabled">
       <p>
         <i class="bi bi-info-circle"></i>
-        Set <code>GITHUB_TOKEN</code> environment variable to enable GitHub
-        features.
+        Set <code>GITHUB_TOKEN</code> or <code>GITHUB_TOKENS</code> to enable
+        GitHub features.
       </p>
     </div>
 

@@ -1,10 +1,10 @@
 import { Span } from "@opentelemetry/sdk-trace-base";
 import * as fse from "fs-extra";
 import * as path from "path";
-import { Config } from "../Config";
+import { Config, ConfigGitHubTokens } from "../Config";
 import { OTelMeter, OTelTracer, OTelLogger } from "../OTelContext";
 import { getWatchedRepos, WatchedReposInit } from "./WatchedRepos";
-import { GitHubSetToken, GitHubIsEnabled } from "./GitHubApi";
+import { GitHubSetTokens, GitHubIsEnabled } from "./GitHubApi";
 
 const logger = OTelLogger().createModuleLogger("GitHubMetrics");
 
@@ -26,9 +26,8 @@ export async function GitHubMetricsInit(
 
   WatchedReposInit(config);
 
-  if (config.GITHUB_TOKEN) {
-    GitHubSetToken(config.GITHUB_TOKEN);
-  }
+  // Sync tokens from config
+  GitHubSetTokens(ConfigGitHubTokens(config));
 
   const meter = OTelMeter();
 
