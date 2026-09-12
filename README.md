@@ -64,7 +64,8 @@ See the [ConfigMap YAML](docs/deployments/kubernetes/sourcecode-editor/base/conf
 | LLM_API_KEY                                             | API key for LLM (DeepSeek)               | (empty)                                   | Config file or environment variable |
 | LLM_API_URL                                             | LLM API endpoint URL                     | https://api.deepseek.com/chat/completions | Config file or environment variable |
 | LLM_MODEL                                               | LLM model name                           | deepseek-chat                             | Config file or environment variable |
-| GITHUB_TOKEN                                            | GitHub personal access token             | (empty)                                   | Config file or environment variable |
+| GITHUB_TOKEN                                            | GitHub personal access token (legacy single-token config) | (empty)                  | Config file or environment variable |
+| GITHUB_TOKENS                                           | GitHub personal access tokens (JSON array) for multiple orgs/personal accounts | (empty) | Config file or environment variable |
 | GITHUB_SYNC_FREQUENCY                                   | Frequency (in ms) to sync GitHub repos   | 300000                                    | Config file or environment variable |
 | OPENTELEMETRY_COLLECTOR_HTTP_TRACES                     | OTEL collector endpoint for traces       | (empty)                                   | Config file or environment variable |
 | OPENTELEMETRY_COLLECTOR_HTTP_METRICS                    | OTEL collector endpoint for metrics      | (empty)                                   | Config file or environment variable |

@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthGetUserSession } from "../users/Auth";
-import { Config } from "../Config";
+import { Config, ConfigGitHubTokens } from "../Config";
 import { Project } from "../model/Project";
 import { ProjectsDataAdd } from "../projects/ProjectsData";
 import { ProjectsSyncStartProject } from "../projects/ProjectsSync";
@@ -15,7 +15,7 @@ import {
   GitHubGetLatestActions,
   GitHubCreatePull,
   GitHubMergePull,
-  GitHubSetToken,
+  GitHubSetTokens,
 } from "./GitHubApi";
 
 const logger = OTelLogger().createModuleLogger("GitHubRoutes");
@@ -25,10 +25,8 @@ export class GitHubRoutes {
     fastify: FastifyInstance,
     config: Config,
   ): Promise<void> {
-    // Ensure token is synced from config
-    if (config.GITHUB_TOKEN) {
-      GitHubSetToken(config.GITHUB_TOKEN);
-    }
+    // Ensure tokens are synced from config
+    GitHubSetTokens(ConfigGitHubTokens(config));
 
     // Health/status check
     fastify.get("/", async (req, res) => {

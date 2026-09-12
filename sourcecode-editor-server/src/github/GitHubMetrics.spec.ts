@@ -56,12 +56,12 @@ jest.mock("./WatchedRepos", () => ({
 }));
 
 jest.mock("./GitHubApi", () => ({
-  GitHubSetToken: jest.fn(),
+  GitHubSetTokens: jest.fn(),
   GitHubIsEnabled: jest.fn().mockReturnValue(true),
 }));
 
 import { getWatchedRepos, WatchedReposInit } from "./WatchedRepos";
-import { GitHubIsEnabled, GitHubSetToken } from "./GitHubApi";
+import { GitHubIsEnabled, GitHubSetTokens } from "./GitHubApi";
 
 let testDir: string;
 
@@ -99,19 +99,24 @@ describe("GitHubMetrics", () => {
       expect(gaugeCallbacks.has("github.branches")).toBe(true);
     });
 
-    test("should initialise WatchedRepos and set token from config", async () => {
+    test("should initialise WatchedRepos and set tokens from config", async () => {
       (WatchedReposInit as jest.Mock).mockClear();
 
       const config = {
         DATA_DIR: testDir,
-        GITHUB_TOKEN: "ghp_test_token",
+        GITHUB_TOKEN: "ghp_legacy_token",
+        GITHUB_TOKENS: ["ghp_org_token", "ghp_personal_token"],
         GITHUB_SYNC_FREQUENCY: 60000,
       } as any;
       await GitHubMetricsInit(null as any, config);
 
       expect(WatchedReposInit).toHaveBeenCalledWith(config);
 
-      expect(GitHubSetToken).toHaveBeenCalledWith("ghp_test_token");
+      expect(GitHubSetTokens).toHaveBeenCalledWith([
+        "ghp_legacy_token",
+        "ghp_org_token",
+        "ghp_personal_token",
+      ]);
     });
   });
 
