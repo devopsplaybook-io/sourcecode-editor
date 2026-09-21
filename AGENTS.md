@@ -72,13 +72,14 @@ sourcecode-editor/
 
 ## Key Conventions
 
-- **TypeScript**: Target ES2019, CommonJS output, strict mode, declarations generated.
+- **TypeScript**: Target ES2020, CommonJS output, strict mode, declarations generated.
 - **Fastify**: HTTP framework. Routes are class-based, registered via `fastify.register()`.
 - **OpenTelemetry**: Every module creates a `ModuleLogger` via `OTelLogger().createModuleLogger(name)`. Functions accept a `Span` context as the first parameter for distributed tracing.
 - **better-sqlite3 (synchronous)**: Database operations from `@devopsplaybook.io/common-utils` return values directly (NOT Promises). Do NOT `await` calls to `SqlDbUtilsQuerySQL`, `SqlDbUtilsExecSQL`, `DbUtilsNoTelemetryExecSQL`, or `DbUtilsNoTelemetryQuerySQL`.
 - **SystemCommandExecute**: From common-utils. Does NOT take a `Span` as the first argument. Signature: `(command: string, options?) => Promise<string>`.
 - **No default exports**: All modules use named exports only.
-- **ESLint**: Uses `typescript-eslint` with `strict` and `stylistic` rule sets. Minimize `eslint-disable` comments.
+- **Linting**: Uses `oxlint` with its default **recommended** preset (no config file). Minimize disable comments (oxlint honors `eslint-disable`-style comments); use them only when the rule cannot be satisfied.
+- **Tests**: Jest with the `@swc/jest` transform (`jsc.target: "es2020"`, matching tsconfig) and `v8` coverage provider. Spec files live next to source (`*.spec.ts`). Run with `npm run test`. `npm run build` also type-checks the specs (`tsc -p tsconfig.spec.json --noEmit`).
 
 ## Dependencies
 
@@ -106,9 +107,9 @@ sourcecode-editor/
 ```bash
 cd sourcecode-editor-server
 npm install
-npm run build    # tsc -> dist/ (must succeed with 0 errors)
-npm run lint     # eslint src (must pass with 0 errors)
-npm run test     # jest --coverage (all tests must pass)
+npm run build    # tsc -> dist/ + spec typecheck (tsc -p tsconfig.spec.json --noEmit; must succeed with 0 errors)
+npm run lint     # oxlint src (must pass with 0 errors)
+npm run test     # jest --coverage (@swc/jest transform, v8 coverage; all tests must pass)
 ```
 
 All three commands must pass before committing.
@@ -121,7 +122,7 @@ All three commands must pass before committing.
 
 ## Known Gotchas
 
-- **uuid ESM**: `uuid` v14+ ships ESM. Jest config has `transformIgnorePatterns` and `allowJs: true` in `tsconfig.spec.json` to handle this.
+- **uuid ESM**: `uuid` v14+ ships ESM. Jest config keeps `transformIgnorePatterns: ["/node_modules/(?!(uuid)/)"]` so `@swc/jest` transforms it (the transform regex includes `.js`); `allowJs: true` in `tsconfig.spec.json` also applies.
 - **better-sqlite3 is synchronous**: Never `await` DB calls from common-utils `SqlDbUtils*` or `DbUtilsNoTelemetry*` functions.
 - **SystemCommandExecute signature**: Does NOT accept a `Span` first argument. Pass only `(command, options?)`.
 - **Git operations**: All `SystemCommandExecute` calls in `Git.ts` and `SSH.ts` use command strings only (no span parameter).
