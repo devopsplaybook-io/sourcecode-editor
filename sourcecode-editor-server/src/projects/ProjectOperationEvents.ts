@@ -32,7 +32,7 @@ export async function RunWithEvents(
     EventBusEmit({
       repository,
       eventType: `${baseEventType}.completed`,
-      eventDetail: { ...(options.completedDetail || {}) },
+      eventDetail: { ...options.completedDetail },
     });
   } catch (err) {
     logger.error(`Operation ${baseEventType} failed`, err, span);
