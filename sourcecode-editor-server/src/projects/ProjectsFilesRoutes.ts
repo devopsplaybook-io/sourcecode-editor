@@ -9,6 +9,7 @@ import {
   FilesProjectRename,
   FilesProjectDelete,
   FilesProjectCreate,
+  FilesProjectSearch,
 } from "../files/Files";
 import {
   ApiUtilsCompressJson,
@@ -214,6 +215,35 @@ export class ProjectsFilesRoutes {
           currentContent,
         }),
       });
+    });
+
+    fastify.post<{
+      Params: { projectId: string };
+      Body: { query: string };
+    }>("/search", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(404).send({ error: "Project Not Found" });
+      }
+      if (
+        !req.body ||
+        typeof req.body.query !== "string" ||
+        req.body.query.trim().length === 0
+      ) {
+        return res.status(400).send({ error: "Query Required" });
+      }
+      const matches = await FilesProjectSearch(
+        OTelRequestSpan(req),
+        project,
+        req.body.query,
+      );
+      res.status(200).send({ matches });
     });
 
     fastify.post<{
