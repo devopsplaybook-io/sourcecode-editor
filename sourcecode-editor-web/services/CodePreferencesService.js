@@ -39,4 +39,30 @@ export class CodePreferencesService {
   static isValidProject(projectId, projects) {
     return projects.some((project) => project.projectId === projectId);
   }
+
+  static setOpenTabs(projectId, paths) {
+    this.set(
+      `code_preferences_open_tabs_${projectId}`,
+      JSON.stringify(paths)
+    );
+  }
+
+  static getOpenTabs(projectId) {
+    const raw = this.get(`code_preferences_open_tabs_${projectId}`);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static setActiveTabPath(projectId, path) {
+    this.set(`code_preferences_active_tab_${projectId}`, path || "");
+  }
+
+  static getActiveTabPath(projectId) {
+    return this.get(`code_preferences_active_tab_${projectId}`);
+  }
 }

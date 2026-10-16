@@ -142,3 +142,91 @@ export async function FilesProjectRename(
 }
 
 const FILES_IGNORE_LIST = ["node_modules", ".git"];
+
+const FILES_SEARCH_MAX_FILE_SIZE = 1024 * 1024;
+const FILES_SEARCH_BINARY_CHECK_SIZE = 8 * 1024;
+const FILES_SEARCH_MAX_MATCHES = 200;
+const FILES_SEARCH_MAX_TEXT_LENGTH = 200;
+
+export type FilesProjectSearchMatch = {
+  path: string;
+  line: number;
+  text: string;
+};
+
+export async function FilesProjectSearch(
+  context: Span,
+  project: Project,
+  query: string
+): Promise<FilesProjectSearchMatch[]> {
+  const span = OTelTracer().startSpan("FilesProjectSearch", context);
+  try {
+    const projectFolder = path.join(projectParentFolder, project.projectId);
+    const matches: FilesProjectSearchMatch[] = [];
+    await searchFolder(
+      projectFolder,
+      "",
+      query.toLowerCase(),
+      matches
+    );
+    span.end();
+    return matches;
+  } catch (err) {
+    span.end();
+    throw err;
+  }
+}
+
+async function searchFolder(
+  dir: string,
+  relDir: string,
+  lowerQuery: string,
+  matches: FilesProjectSearchMatch[]
+): Promise<void> {
+  if (matches.length >= FILES_SEARCH_MAX_MATCHES) return;
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (matches.length >= FILES_SEARCH_MAX_MATCHES) return;
+    if (FILES_IGNORE_LIST.includes(entry.name)) continue;
+    const fullPath = path.join(dir, entry.name);
+    const relPath = path.join(relDir, entry.name);
+    if (entry.isDirectory()) {
+      await searchFolder(fullPath, relPath, lowerQuery, matches);
+    } else if (entry.isFile()) {
+      await searchFile(fullPath, relPath, lowerQuery, matches);
+    }
+  }
+}
+
+async function searchFile(
+  absPath: string,
+  relPath: string,
+  lowerQuery: string,
+  matches: FilesProjectSearchMatch[]
+): Promise<void> {
+  const stat = await fs.stat(absPath);
+  if (stat.size > FILES_SEARCH_MAX_FILE_SIZE) return;
+  const handle = await fs.open(absPath, "r");
+  let content: string;
+  try {
+    const headLength = Math.min(FILES_SEARCH_BINARY_CHECK_SIZE, stat.size);
+    const head = Buffer.alloc(headLength);
+    await handle.read(head, 0, headLength, 0);
+    if (head.includes(0)) return;
+    content = await handle.readFile("utf-8");
+  } finally {
+    await handle.close();
+  }
+  const lines = content.split("\n");
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    if (matches.length >= FILES_SEARCH_MAX_MATCHES) return;
+    const lineText = lines[lineIndex];
+    if (lineText.toLowerCase().includes(lowerQuery)) {
+      matches.push({
+        path: relPath,
+        line: lineIndex + 1,
+        text: lineText.trim().slice(0, FILES_SEARCH_MAX_TEXT_LENGTH),
+      });
+    }
+  }
+}
