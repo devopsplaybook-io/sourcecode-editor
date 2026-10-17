@@ -14,6 +14,7 @@ import type { RepositoryEvent } from "~~/services/RepositoryEventTypes";
 export const RepositoryEventsStore = defineStore("RepositoryEventsStore", {
   state: () => ({
     inFlight: {} as Record<string, string | null>, // repository -> baseEventType (e.g. "git.pull")
+    phases: {} as Record<string, string | null>, // repository -> human-readable phase label
     initialised: false,
   }),
   getters: {
@@ -23,6 +24,10 @@ export const RepositoryEventsStore = defineStore("RepositoryEventsStore", {
     activeOperation(state) {
       return (repository: string): string | null =>
         state.inFlight[repository] || null;
+    },
+    activeOperationLabel(state) {
+      return (repository: string): string | null =>
+        state.phases[repository] || null;
     },
   },
   actions: {
@@ -45,12 +50,17 @@ export const RepositoryEventsStore = defineStore("RepositoryEventsStore", {
           /\.started$/,
           "",
         );
+        const detail = event.eventDetail as { phase?: string };
+        this.phases[event.repository] = detail?.phase || null;
       } else if (
         event.eventType.endsWith(".completed") ||
         event.eventType.endsWith(".failed")
       ) {
         if (event.repository in this.inFlight) {
           delete this.inFlight[event.repository];
+        }
+        if (event.repository in this.phases) {
+          delete this.phases[event.repository];
         }
       }
     },

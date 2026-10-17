@@ -5,8 +5,11 @@ Source Code Editor is a web-based code editing platform with Git repository mana
 ## Features
 
 - **Project Management**: Add and manage Git repositories (clone, pull, push, commit, checkout, branch management) and remove repositories from the application (local copy only; the remote repository is never deleted)
+- **One-step Add Repository**: URL format validation, name auto-suggested from the URL, and optional clone-on-add in a single step
 - **Code Editor**: Browse and edit files within repositories with a web-based editor
 - **Git Operations**: Full Git workflow support — commit, push, pull, branch management, reset
+- **Git History**: Recent commits per project (message, author, date), changed files per commit and read-only file content at any revision
+- **Transparent Git Errors**: Failed git operations surface the captured git output in the UI, with progress phases during long operations
 - **GitHub Integration**: Sync and track GitHub repositories, manage pull requests
 - **LLM Assistance**: AI-powered code assistance via DeepSeek (configurable)
 - **SSH Key Management**: Manage SSH public keys for Git over SSH access

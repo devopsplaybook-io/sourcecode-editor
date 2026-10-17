@@ -11,6 +11,15 @@ const logger = OTelLogger().createModuleLogger("Git");
 let config: Config;
 let projectParentFolder = "";
 
+export interface GitCommitSummary {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+}
+
+const GIT_COMMIT_HASH_PATTERN = /^[0-9a-f]{7,40}$/i;
+
 export async function GitInit(context: Span, configIn: Config): Promise<void> {
   const span = OTelTracer().startSpan("GitInit", context);
   config = configIn;
@@ -437,6 +446,131 @@ export async function GitGetBranchStatus(
     span.end();
     throw err;
   }
+}
+
+export async function GitLog(
+  context: Span,
+  project: Project,
+  limit = 30,
+): Promise<GitCommitSummary[]> {
+  const span = OTelTracer().startSpan("GitLog", context);
+  try {
+    const gitCommandOutput = await SystemCommandExecute(
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git log -n ${limit} --date=iso-strict --pretty=format:%H%x1f%an%x1f%aI%x1f%s`,
+    );
+    const commits = gitCommandOutput
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        const [hash, author, date, message] = line.split("\x1f");
+        return {
+          hash: hash || "",
+          author: author || "",
+          date: date || "",
+          message: message || "",
+        };
+      });
+    span.end();
+    return commits;
+  } catch (err) {
+    // An unborn branch (repository without commits) has no history to show.
+    if (GitGetErrorOutput(err).includes("does not have any commits yet")) {
+      span.end();
+      return [];
+    }
+    logger.error(`Failed to get log`, err, span);
+    span.end();
+    throw err;
+  }
+}
+
+export async function GitCommitFiles(
+  context: Span,
+  project: Project,
+  hash: string,
+): Promise<FileUpdateStatus[]> {
+  const span = OTelTracer().startSpan("GitCommitFiles", context);
+  try {
+    if (!GIT_COMMIT_HASH_PATTERN.test(hash)) {
+      throw new Error("Invalid commit hash");
+    }
+    const gitCommandOutput = await SystemCommandExecute(
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git show --name-status --pretty=format: ${hash}`,
+    );
+    const files = gitCommandOutput
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        const parts = line.split("\t");
+        const status = parts[0];
+        let state: "modified" | "deleted" | "new";
+        if (status.startsWith("D")) {
+          state = "deleted";
+        } else if (status.startsWith("A")) {
+          state = "new";
+        } else {
+          state = "modified";
+        }
+        // Rename/copy lines carry two paths; the destination path is last.
+        return { path: parts[parts.length - 1], state };
+      });
+    span.end();
+    return files;
+  } catch (err) {
+    logger.error(`Failed to get commit files`, err, span);
+    span.end();
+    throw err;
+  }
+}
+
+export async function GitFileAtRevision(
+  context: Span,
+  project: Project,
+  hash: string,
+  filePath: string,
+): Promise<string> {
+  const span = OTelTracer().startSpan("GitFileAtRevision", context);
+  if (!GIT_COMMIT_HASH_PATTERN.test(hash)) {
+    span.end();
+    throw new Error("Invalid commit hash");
+  }
+  try {
+    const safePath = filePath.replace(/"/g, '\\"');
+    const content = await SystemCommandExecute(
+      `${await GitEnv(span)} && cd ${projectParentFolder}/${
+        project.projectId
+      } && git show ${hash}:"${safePath}"`,
+    );
+    span.end();
+    return content;
+  } catch {
+    // The file may not exist at that revision. Return empty string.
+    logger.warn(`File not in revision or read failed: ${filePath}`, span);
+    span.end();
+    return "";
+  }
+}
+
+// Returns the captured stderr (then stdout, then message) of a failed
+// SystemCommandExecute rejection, so git output can be surfaced to users.
+export function GitGetErrorOutput(err: unknown): string {
+  const error = err as { stderr?: unknown; stdout?: unknown; message?: unknown };
+  let output = "";
+  if (typeof error?.stderr === "string" && error.stderr.trim().length > 0) {
+    output = error.stderr;
+  } else if (
+    typeof error?.stdout === "string" &&
+    error.stdout.trim().length > 0
+  ) {
+    output = error.stdout;
+  } else if (typeof error?.message === "string") {
+    output = error.message;
+  }
+  return output.trim();
 }
 
 // Private Function

@@ -13,6 +13,10 @@ export function handleError(error: any): void {
   let text = error.response;
   if (error.response && error.response.data && error.response.data.error) {
     text = error.response.data.error;
+    const detail = error.response.data.detail;
+    if (detail) {
+      text = `${text}: ${String(detail).slice(0, 500)}`;
+    }
   }
   EventBus.emit(EventTypes.ALERT_MESSAGE, {
     type: "error",
