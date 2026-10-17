@@ -16,9 +16,11 @@ import {
   ProjectsSyncStartProject,
 } from "./ProjectsSync";
 import { OTelLogger } from "../OTelContext";
-import { GitClone, GitRemoveProject } from "../git/Git";
+import { GitClone, GitGetErrorOutput, GitRemoveProject } from "../git/Git";
+import { RepoUrlIsValid } from "../git/RepoUrl";
 import { EventBusEmit } from "../events/EventBus";
 import { RepositoryEventTypes } from "../events/RepositoryEventTypes";
+import { RunWithEvents } from "./ProjectOperationEvents";
 const logger = OTelLogger().createModuleLogger("ProjectsRoutes");
 export class ProjectsRoutes {
   //
@@ -38,6 +40,7 @@ export class ProjectsRoutes {
         name: string;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         info: any;
+        clone?: boolean;
       };
     }>("/", async (req, res) => {
       if (!(await AuthGetUserSession(req)).isAuthenticated) {
@@ -45,6 +48,12 @@ export class ProjectsRoutes {
       }
       if (!req.body.name) {
         return res.status(400).send({ error: "Missing: Name" });
+      }
+      if (!req.body.info || !RepoUrlIsValid(req.body.info.url)) {
+        return res.status(400).send({
+          error: "Invalid Repository URL",
+          detail: req.body.info ? String(req.body.info.url) : "",
+        });
       }
       const project = new Project();
       project.name = req.body.name;
@@ -55,9 +64,26 @@ export class ProjectsRoutes {
         eventType: RepositoryEventTypes.PROJECT_CREATED,
         eventDetail: { project },
       });
-      await GitClone(OTelRequestSpan(req), project);
-      await ProjectsSyncStartProject(OTelRequestSpan(req), project);
-
+      if (req.body.clone === false) {
+        res.status(201).send({});
+        return;
+      }
+      try {
+        await RunWithEvents(
+          OTelRequestSpan(req),
+          project,
+          "git.clone",
+          async () => {
+            await GitClone(OTelRequestSpan(req), project);
+          },
+        );
+      } catch (err) {
+        logger.error("Failed to clone project", err, OTelRequestSpan(req));
+        return res.status(500).send({
+          error: "Operation Failed",
+          detail: GitGetErrorOutput(err),
+        });
+      }
       res.status(201).send({});
     });
 
@@ -86,6 +112,17 @@ export class ProjectsRoutes {
       );
       if (!project) {
         return res.status(404).send({ error: "Project Not Found" });
+      }
+      if (
+        req.body.info &&
+        typeof req.body.info.url === "string" &&
+        req.body.info.url.length > 0 &&
+        !RepoUrlIsValid(req.body.info.url)
+      ) {
+        return res.status(400).send({
+          error: "Invalid Repository URL",
+          detail: req.body.info.url,
+        });
       }
       project.name = req.body.name || project.name;
       project.info = req.body.info || project.info;

@@ -1,10 +1,14 @@
 import { OTelRequestSpan } from "@devopsplaybook.io/otel-utils-fastify";
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyReply } from "fastify";
 import { ProjectsDataGet } from "./ProjectsData";
 import {
   GitCheckout,
   GitClone,
   GitCommit,
+  GitCommitFiles,
+  GitFileAtRevision,
+  GitGetErrorOutput,
+  GitLog,
   GitPull,
   GitPush,
   GitReset,
@@ -12,11 +16,21 @@ import {
   GitDeleteBranch,
   GitDiscardFile,
 } from "../git/Git";
+import { ApiUtilsCompressJson } from "../utils-std-ts/ApiUtils";
 import { OTelLogger } from "../OTelContext";
 import { AuthGetUserSession } from "../users/Auth";
 import { RunWithEvents } from "./ProjectOperationEvents";
 
 const logger = OTelLogger().createModuleLogger("ProjectsOperationsRoutes");
+
+// Sends the captured git command output with the failure so users can see
+// why an operation failed instead of a generic "Operation Failed".
+function sendOperationError(res: FastifyReply, err: unknown): void {
+  res.status(500).send({
+    error: "Operation Failed",
+    detail: GitGetErrorOutput(err),
+  });
+}
 
 export class ProjectsOperationsRoutes {
   //
@@ -37,13 +51,13 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(OTelRequestSpan(req), project, "git.clone", async () => {
+      return RunWithEvents(OTelRequestSpan(req), project, "git.clone", async () => {
         await GitClone(OTelRequestSpan(req), project);
       })
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Clone Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -65,7 +79,7 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(
+      return RunWithEvents(
         OTelRequestSpan(req),
         project,
         "git.checkout",
@@ -77,7 +91,7 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Checkout Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -96,13 +110,13 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(OTelRequestSpan(req), project, "git.pull", async () => {
+      return RunWithEvents(OTelRequestSpan(req), project, "git.pull", async () => {
         await GitPull(OTelRequestSpan(req), project);
       })
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Pull Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -121,13 +135,13 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(OTelRequestSpan(req), project, "git.reset", async () => {
+      return RunWithEvents(OTelRequestSpan(req), project, "git.reset", async () => {
         await GitReset(OTelRequestSpan(req), project);
       })
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Reset Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -147,7 +161,7 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(
+      return RunWithEvents(
         OTelRequestSpan(req),
         project,
         "git.commit",
@@ -169,7 +183,7 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Commit Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -189,7 +203,7 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(
+      return RunWithEvents(
         OTelRequestSpan(req),
         project,
         "git.discard",
@@ -201,7 +215,7 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Discard Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -220,13 +234,13 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(OTelRequestSpan(req), project, "git.push", async () => {
+      return RunWithEvents(OTelRequestSpan(req), project, "git.push", async () => {
         await GitPush(OTelRequestSpan(req), project);
       })
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Push Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -244,7 +258,7 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(
+      return RunWithEvents(
         OTelRequestSpan(req),
         project,
         "git.branch.create",
@@ -256,7 +270,7 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Create Branch Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
     });
 
@@ -274,7 +288,7 @@ export class ProjectsOperationsRoutes {
       if (!project) {
         return res.status(401).send({ error: "Operation Rejected" });
       }
-      RunWithEvents(
+      return RunWithEvents(
         OTelRequestSpan(req),
         project,
         "git.branch.delete",
@@ -286,8 +300,92 @@ export class ProjectsOperationsRoutes {
         .then(() => res.status(201).send({}))
         .catch((err) => {
           logger.error("Git Delete Branch Failed", err, OTelRequestSpan(req));
-          return res.status(500).send({ error: "Operation Failed" });
+          sendOperationError(res, err);
         });
+    });
+
+    fastify.get<{
+      Params: { projectId: string };
+      Querystring: { limit?: string };
+    }>("/log", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      let limit = 30;
+      const parsedLimit = parseInt(req.query.limit || "", 10);
+      if (!isNaN(parsedLimit)) {
+        limit = Math.min(100, Math.max(1, parsedLimit));
+      }
+      try {
+        const commits = await GitLog(OTelRequestSpan(req), project, limit);
+        return res.status(200).send({ commits });
+      } catch (err) {
+        logger.error("Git Log Failed", err, OTelRequestSpan(req));
+        sendOperationError(res, err);
+      }
+    });
+
+    fastify.get<{
+      Params: { projectId: string; hash: string };
+    }>("/commit/:hash/files", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      try {
+        const files = await GitCommitFiles(
+          OTelRequestSpan(req),
+          project,
+          req.params.hash,
+        );
+        return res.status(200).send({ files });
+      } catch (err) {
+        logger.error("Git Commit Files Failed", err, OTelRequestSpan(req));
+        sendOperationError(res, err);
+      }
+    });
+
+    fastify.post<{
+      Params: { projectId: string };
+      Body: { hash: string; file: string };
+    }>("/file-at-revision", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      const project = await ProjectsDataGet(
+        OTelRequestSpan(req),
+        req.params.projectId,
+      );
+      if (!project) {
+        return res.status(401).send({ error: "Operation Rejected" });
+      }
+      try {
+        const content = await GitFileAtRevision(
+          OTelRequestSpan(req),
+          project,
+          req.body.hash,
+          req.body.file,
+        );
+        return res.status(200).send({
+          file: await ApiUtilsCompressJson({ content }),
+        });
+      } catch (err) {
+        logger.error("Git File At Revision Failed", err, OTelRequestSpan(req));
+        sendOperationError(res, err);
+      }
     });
   }
 }

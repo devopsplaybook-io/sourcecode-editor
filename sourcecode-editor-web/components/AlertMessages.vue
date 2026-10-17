@@ -22,9 +22,11 @@ export default {
   async created() {
     EventBus.on(EventTypes.ALERT_MESSAGE, (message) => {
       this.messages.push(message);
+      // Keep errors on screen longer so multi-line git output is readable.
+      const duration = message.type === "error" ? 15000 : 5000;
       setTimeout(() => {
         this.messages.splice(0, 1);
-      }, 5000);
+      }, duration);
     });
   },
 };

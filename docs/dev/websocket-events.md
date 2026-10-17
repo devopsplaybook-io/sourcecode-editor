@@ -40,9 +40,9 @@ migration is needed.
 | Project    | `project.created`      | `{ project }`                                       |
 | Project    | `project.updated`      | `{ project }`                                       |
 | Project    | `project.deleted`      | `{}`                                                |
-| Lifecycle  | `git.<op>.started`     | `{ project: { id, name } }`                         |
+| Lifecycle  | `git.<op>.started`     | `{ project: { id, name }, phase }`                  |
 | Lifecycle  | `git.<op>.completed`   | op-specific (e.g. `{ branch }` for checkout)        |
-| Lifecycle  | `git.<op>.failed`      | `{ message }`                                       |
+| Lifecycle  | `git.<op>.failed`      | `{ message, output }` (output = captured git stderr/stdout) |
 | Status     | `git.status.changed`   | `{ status: ProjectStatus }` (fat snapshot)          |
 | File       | `file.created`         | `{ parentPath, fileName }`                          |
 | File       | `file.updated`         | `{ path }`                                          |
@@ -50,7 +50,8 @@ migration is needed.
 | File       | `file.renamed`         | `{ oldPath, newPath }`                              |
 
 `<op>` is one of: `clone`, `pull`, `push`, `commit`, `checkout`,
-`reset`, `branch.create`, `branch.delete`.
+`reset`, `discard`, `branch.create`, `branch.delete`. `phase` is a
+human-readable label (e.g. "Cloning repository") for progress display.
 
 The fat `git.status.changed` payload lets the UI update without a
 follow-up HTTP roundtrip — the periodic `ProjectsSync` loop remains as

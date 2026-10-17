@@ -18,6 +18,11 @@
             :title="repositoryEventsStore.activeOperation(project.projectId)"
           >
             <i class="bi bi-arrow-repeat spin"></i>
+            <span
+              v-if="repositoryEventsStore.activeOperationLabel(project.projectId)"
+              class="project-busy-label"
+              >{{ repositoryEventsStore.activeOperationLabel(project.projectId) }}…</span
+            >
           </span>
         </span>
       </header>
@@ -39,6 +44,27 @@
             {{ branch }}
           </option>
         </select>
+        <span
+          v-if="
+            project.status.branchStatus &&
+            (project.status.branchStatus.ahead > 0 ||
+              project.status.branchStatus.behind > 0)
+          "
+          class="branch-status-badges"
+        >
+          <span
+            v-if="project.status.branchStatus.ahead > 0"
+            class="branch-badge"
+            title="Commits ahead of origin"
+            >↑{{ project.status.branchStatus.ahead }}</span
+          >
+          <span
+            v-if="project.status.branchStatus.behind > 0"
+            class="branch-badge"
+            title="Commits behind origin"
+            >↓{{ project.status.branchStatus.behind }}</span
+          >
+        </span>
       </div>
       <div class="action-controls">
         <button
@@ -53,6 +79,16 @@
         <NuxtLink v-else :to="'/projects/' + project.projectId"
           ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
         >
+        <button
+          v-if="project.status"
+          :disabled="
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          @click="historyProject(project)"
+        >
+          <i class="bi bi-clock-history"></i> History
+        </button>
         <button
           v-if="project.status?.branchStatus?.behind > 0"
           :disabled="
@@ -135,6 +171,11 @@
       :project="selectedProject"
       @onClose="onCloseDialog()"
     />
+    <DialogHistory
+      v-if="showHistoryDialog"
+      :project="selectedProject"
+      @onClose="onCloseDialog()"
+    />
     <!-- Dialog for branch creation -->
     <DialogCreateBranch
       v-if="showCreateBranchDialog"
@@ -163,6 +204,7 @@ export default {
       showCommitDialog: false,
       selectedProject: null,
       showCreateBranchDialog: false,
+      showHistoryDialog: false,
     };
   },
   async created() {
@@ -236,6 +278,7 @@ export default {
       this.selectedProject = null;
       this.showCommitDialog = false;
       this.showCreateBranchDialog = false;
+      this.showHistoryDialog = false;
     },
     refresh() {
       GitProjectsStore().fetch();
@@ -246,6 +289,20 @@ export default {
     },
     async onBranchSelect(project, event) {
       const branch = event.target.value;
+      const dirtyCount =
+        project.status && project.status.filesUpdateStatus
+          ? project.status.filesUpdateStatus.length
+          : 0;
+      if (dirtyCount > 0) {
+        if (
+          !confirm(
+            `Project "${project.name}" has ${dirtyCount} uncommitted change(s) that may be lost or carried over to the other branch. Switch to "${branch}" anyway?`,
+          )
+        ) {
+          event.target.value = project.status.currentBranch;
+          return;
+        }
+      }
       await axios
         .post(
           `${(await Config.get()).SERVER_URL}/projects/${
@@ -262,6 +319,10 @@ export default {
           });
         })
         .catch(handleError);
+    },
+    historyProject(project) {
+      this.selectedProject = project;
+      this.showHistoryDialog = true;
     },
     openCreateBranchDialog(project) {
       this.selectedProject = project;
@@ -378,6 +439,23 @@ export default {
 .project-busy .spin {
   display: inline-block;
   animation: project-busy-spin 1s linear infinite;
+}
+.project-busy-label {
+  margin-left: 0.4em;
+}
+.branch-status-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  margin-left: var(--gap-inline);
+}
+.branch-badge {
+  font-size: var(--font-icon);
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0 0.3em;
+  opacity: 0.85;
+  white-space: nowrap;
 }
 @keyframes project-busy-spin {
   to {
