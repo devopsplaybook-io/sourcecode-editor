@@ -11,7 +11,7 @@ Source Code Editor is a web-based code editing platform with Git repository mana
 - **Git History**: Recent commits per project (message, author, date), changed files per commit and read-only file content at any revision
 - **Transparent Git Errors**: Failed git operations surface the captured git output in the UI, with progress phases during long operations
 - **GitHub Integration**: Sync and track GitHub repositories, manage pull requests
-- **LLM Assistance**: AI-powered code assistance via DeepSeek (configurable)
+- **LLM Assistance**: interactive AI assistant with streaming responses (SSE), multi-turn conversation per file with retry, and context-aware presets (explain / refactor / add tests / fix) acting on the current selection or the whole file; the model in use and the request latency are displayed
 - **SSH Key Management**: Manage SSH public keys for Git over SSH access
 - **User Authentication**: Multi-user support with admin/user roles and JWT-based sessions
 - **OpenTelemetry**: Built-in OpenTelemetry tracing, metrics, and logs export

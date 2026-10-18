@@ -64,12 +64,13 @@
             <a
               href="#"
               v-if="activeTab"
-              @click.prevent="showLLMDialog = true"
+              @click.prevent="openLLMDialog"
               ><i class="bi bi-robot"> LLM </i></a
             >
           </div>
         </div>
         <CodeEditor
+          ref="codeEditor"
           v-if="activeTab"
           :content="activeTab.content"
           :languagePath="activeTabPath"
@@ -90,7 +91,11 @@
           :fileName="activeTab.name"
           :projectId="selectedProjectId"
           :originalContent="activeTab.content"
+          :content="activeTab.content"
+          :selection="llmSelection"
+          :history="llmHistories[activeTabPath] || []"
           @codeUpdated="codeUpdated"
+          @history-updated="onLLMHistoryUpdated"
           @close="showLLMDialog = false"
         />
       </div>
@@ -149,6 +154,8 @@ export default {
       saveState: "idle",
       tabsRestoredForProject: false,
       showLLMDialog: false,
+      llmHistories: {},
+      llmSelection: null,
       showQuickOpen: false,
       showSearchPanel: false,
       showCommitDialog: false,
@@ -275,6 +282,8 @@ export default {
       this.tabsRestoredForProject = false;
       this.files = [];
       this.showLLMDialog = false;
+      this.llmHistories = {};
+      this.llmSelection = null;
       this.pendingGotoLine = null;
       await this.fetchFiles();
     },
@@ -354,6 +363,7 @@ export default {
       this.debouncedOnFileContentChange.flush();
       const index = this.tabs.indexOf(tab);
       this.tabs.splice(index, 1);
+      delete this.llmHistories[path];
       if (this.activeTabPath === path) {
         const nextTab = this.tabs[Math.max(0, index - 1)] || null;
         this.activeTabPath = nextTab ? nextTab.path : null;
@@ -460,6 +470,20 @@ export default {
       tab.dirty = content !== tab.savedContent;
       if (tab.dirty) {
         await this.saveTabContent(tab);
+      }
+    },
+    openLLMDialog() {
+      if (!this.activeTab) return;
+      const editor = this.$refs.codeEditor;
+      this.llmSelection =
+        editor && typeof editor.getSelectionInfo === "function"
+          ? editor.getSelectionInfo()
+          : null;
+      this.showLLMDialog = true;
+    },
+    onLLMHistoryUpdated(history) {
+      if (this.activeTabPath) {
+        this.llmHistories[this.activeTabPath] = history;
       }
     },
     onGlobalKeydown(e) {
