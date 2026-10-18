@@ -1,0 +1,17 @@
+{
+  "name": "APPLICATION_TITLE",
+  "short_name": "APPLICATION_TITLE",
+  "lang": "en-US",
+  "scope": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12191f",
+  "theme_color": "#12191f",
+  "icons": [
+    {
+      "src": "images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

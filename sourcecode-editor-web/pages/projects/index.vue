@@ -5,201 +5,216 @@
       <NuxtLink to="/projects/new"><i class="bi bi-plus-square"></i></NuxtLink>
       <SyncedIndicator :ts="latestSyncTs" />
     </div>
-    <article
-      v-for="project in gitProjectsStore.projects"
-      :key="project.id"
-      class="project-card"
+    <div
+      v-if="gitProjectsStore.fetching && !gitProjectsStore.projects.length"
+      class="empty-state"
     >
-      <header>
-        {{ project.name }}
-        <span class="activity-indicators">
-          <span
-            v-if="repositoryEventsStore.isBusy(project.projectId)"
-            class="project-busy"
-            :title="repositoryEventsStore.activeOperation(project.projectId)"
-          >
-            <i class="bi bi-arrow-repeat spin"></i>
+      <Loading />
+    </div>
+    <div v-else-if="!gitProjectsStore.projects.length" class="empty-state">
+      <i class="bi bi-journals"></i>
+      <p>No repositories yet. Add your first repository to get started.</p>
+      <NuxtLink to="/projects/new" class="empty-state-action"
+        >Add your first repository</NuxtLink
+      >
+    </div>
+    <template v-else>
+      <article
+        v-for="project in gitProjectsStore.projects"
+        :key="project.id"
+        class="project-card"
+      >
+        <header>
+          {{ project.name }}
+          <span class="activity-indicators">
             <span
-              v-if="repositoryEventsStore.activeOperationLabel(project.projectId)"
-              class="project-busy-label"
-              >{{ repositoryEventsStore.activeOperationLabel(project.projectId) }}…</span
+              v-if="repositoryEventsStore.isBusy(project.projectId)"
+              class="project-busy"
+              :title="repositoryEventsStore.activeOperation(project.projectId)"
+            >
+              <i class="bi bi-arrow-repeat spin"></i>
+              <span
+                v-if="repositoryEventsStore.activeOperationLabel(project.projectId)"
+                class="project-busy-label"
+                >{{ repositoryEventsStore.activeOperationLabel(project.projectId) }}…</span
+              >
+            </span>
+          </span>
+        </header>
+        <div
+          v-if="githubMatch(project)"
+          class="action-controls github-linkage"
+        >
+          <NuxtLink
+            to="/github"
+            class="github-linkage-badge"
+            title="Pull requests on the GitHub page"
+          >
+            <i class="bi bi-git-pull-request"></i>
+            {{ githubOpenPRCount(githubMatch(project)) }} PRs
+          </NuxtLink>
+          <NuxtLink
+            to="/github"
+            class="github-linkage-badge"
+            :title="'Latest GitHub Actions: ' + githubActionsLabel(githubMatch(project))"
+          >
+            <i :class="githubActionsIcon(githubMatch(project))"></i>
+            Actions
+          </NuxtLink>
+          <button
+            class="secondary"
+            title="Create a pull request from the current branch"
+            :disabled="
+              !project.status?.currentBranch ||
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="openCreatePRForProject(project)"
+          >
+            <i class="bi bi-git-pull-request"></i> Create PR
+          </button>
+        </div>
+        <div v-if="project.status" class="action-controls">
+          <select
+            class="branch-select"
+            :value="project.status.currentBranch"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @change="onBranchSelect(project, $event)"
+          >
+            <option
+              v-for="branch in project.status.branches"
+              :key="branch"
+              :value="branch"
+            >
+              {{ branch }}
+            </option>
+          </select>
+          <span
+            v-if="
+              project.status.branchStatus &&
+              (project.status.branchStatus.ahead > 0 ||
+                project.status.branchStatus.behind > 0)
+            "
+            class="branch-status-badges"
+          >
+            <span
+              v-if="project.status.branchStatus.ahead > 0"
+              class="branch-badge"
+              title="Commits ahead of origin"
+              >↑{{ project.status.branchStatus.ahead }}</span
+            >
+            <span
+              v-if="project.status.branchStatus.behind > 0"
+              class="branch-badge"
+              title="Commits behind origin"
+              >↓{{ project.status.branchStatus.behind }}</span
             >
           </span>
-        </span>
-      </header>
-      <div
-        v-if="githubMatch(project)"
-        class="action-controls github-linkage"
-      >
-        <NuxtLink
-          to="/github"
-          class="github-linkage-badge"
-          title="Pull requests on the GitHub page"
-        >
-          <i class="bi bi-git-pull-request"></i>
-          {{ githubOpenPRCount(githubMatch(project)) }} PRs
-        </NuxtLink>
-        <NuxtLink
-          to="/github"
-          class="github-linkage-badge"
-          :title="'Latest GitHub Actions: ' + githubActionsLabel(githubMatch(project))"
-        >
-          <i :class="githubActionsIcon(githubMatch(project))"></i>
-          Actions
-        </NuxtLink>
-        <button
-          class="secondary"
-          title="Create a pull request from the current branch"
-          :disabled="
-            !project.status?.currentBranch ||
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="openCreatePRForProject(project)"
-        >
-          <i class="bi bi-git-pull-request"></i> Create PR
-        </button>
-      </div>
-      <div v-if="project.status" class="action-controls">
-        <select
-          class="branch-select"
-          :value="project.status.currentBranch"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @change="onBranchSelect(project, $event)"
-        >
-          <option
-            v-for="branch in project.status.branches"
-            :key="branch"
-            :value="branch"
+        </div>
+        <div class="action-controls">
+          <button
+            v-if="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            disabled
           >
-            {{ branch }}
-          </option>
-        </select>
-        <span
-          v-if="
-            project.status.branchStatus &&
-            (project.status.branchStatus.ahead > 0 ||
-              project.status.branchStatus.behind > 0)
-          "
-          class="branch-status-badges"
-        >
-          <span
-            v-if="project.status.branchStatus.ahead > 0"
-            class="branch-badge"
-            title="Commits ahead of origin"
-            >↑{{ project.status.branchStatus.ahead }}</span
+            <i class="bi bi-pencil-square"></i> Edit
+          </button>
+          <NuxtLink v-else :to="'/projects/' + project.projectId"
+            ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
           >
-          <span
-            v-if="project.status.branchStatus.behind > 0"
-            class="branch-badge"
-            title="Commits behind origin"
-            >↓{{ project.status.branchStatus.behind }}</span
+          <button
+            v-if="project.status"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="historyProject(project)"
           >
-        </span>
-      </div>
-      <div class="action-controls">
-        <button
-          v-if="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          disabled
-        >
-          <i class="bi bi-pencil-square"></i> Edit
-        </button>
-        <NuxtLink v-else :to="'/projects/' + project.projectId"
-          ><button><i class="bi bi-pencil-square"></i> Edit</button></NuxtLink
-        >
-        <button
-          v-if="project.status"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="historyProject(project)"
-        >
-          <i class="bi bi-clock-history"></i> History
-        </button>
-        <button
-          v-if="project.status?.branchStatus?.behind > 0"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="pullProject(project)"
-        >
-          Pull ({{ project.status?.branchStatus?.behind }} behind)
-        </button>
-        <button
-          v-if="project.status?.filesUpdateStatus?.length > 0"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="commitProject(project)"
-        >
-          Commit
-        </button>
-        <button
-          v-if="project.status?.branchStatus?.ahead > 0"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="pushProject(project)"
-        >
-          Push ({{ project.status?.branchStatus?.ahead }} ahead)
-        </button>
-        <button
-          v-if="!project.status"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="cloneProject(project)"
-        >
-          Clone
-        </button>
-        <!-- New buttons for branch creation and deletion -->
-        <button
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="openCreateBranchDialog(project)"
-        >
-          Create Branch
-        </button>
-        <button
-          v-if="
-            project.status?.currentBranch &&
-            project.status.currentBranch != 'main' &&
-            project.status.currentBranch != 'master'
-          "
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="deleteBranch(project)"
-        >
-          Delete Branch
-        </button>
-        <button
-          class="secondary"
-          :title="'Remove ' + project.name + ' from the application'"
-          :disabled="
-            gitProjectsStore.fetching ||
-            repositoryEventsStore.isBusy(project.projectId)
-          "
-          @click="removeProject(project)"
-        >
-          <i class="bi bi-trash"></i> Remove
-        </button>
-      </div>
-    </article>
+            <i class="bi bi-clock-history"></i> History
+          </button>
+          <button
+            v-if="project.status?.branchStatus?.behind > 0"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="pullProject(project)"
+          >
+            Pull ({{ project.status?.branchStatus?.behind }} behind)
+          </button>
+          <button
+            v-if="project.status?.filesUpdateStatus?.length > 0"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="commitProject(project)"
+          >
+            Commit
+          </button>
+          <button
+            v-if="project.status?.branchStatus?.ahead > 0"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="pushProject(project)"
+          >
+            Push ({{ project.status?.branchStatus?.ahead }} ahead)
+          </button>
+          <button
+            v-if="!project.status"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="cloneProject(project)"
+          >
+            Clone
+          </button>
+          <!-- New buttons for branch creation and deletion -->
+          <button
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="openCreateBranchDialog(project)"
+          >
+            Create Branch
+          </button>
+          <button
+            v-if="
+              project.status?.currentBranch &&
+              project.status.currentBranch != 'main' &&
+              project.status.currentBranch != 'master'
+            "
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="deleteBranch(project)"
+          >
+            Delete Branch
+          </button>
+          <button
+            class="secondary"
+            :title="'Remove ' + project.name + ' from the application'"
+            :disabled="
+              gitProjectsStore.fetching ||
+              repositoryEventsStore.isBusy(project.projectId)
+            "
+            @click="removeProject(project)"
+          >
+            <i class="bi bi-trash"></i> Remove
+          </button>
+        </div>
+      </article>
+    </template>
     <DialogCommit
       v-if="showCommitDialog"
       :project="selectedProject"

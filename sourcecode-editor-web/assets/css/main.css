@@ -38,3 +38,43 @@
   --opacity-hover: 1; /* Full opacity on hover */
   --opacity-disabled: 0.3; /* Disabled/inactive elements */
 }
+
+/* =============================================
+   Empty states (shared across pages)
+   ============================================= */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad-page);
+  opacity: var(--opacity-muted);
+  text-align: center;
+}
+
+.empty-state i {
+  font-size: var(--font-icon-xl);
+  margin-bottom: var(--gap-inline);
+}
+
+.empty-state-action {
+  margin-top: var(--gap-inline);
+}
+
+/* =============================================
+   Mobile: touch target sizing (WCAG-friendly)
+   ============================================= */
+@media (max-width: 900px) {
+  button,
+  select {
+    min-height: 44px;
+  }
+
+  .actions i {
+    padding: 0.35em;
+  }
+
+  .node-content {
+    padding: 0.35em 0;
+  }
+}
