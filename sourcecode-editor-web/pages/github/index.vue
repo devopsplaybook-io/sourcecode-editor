@@ -829,20 +829,4 @@ details summary i {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* Empty state */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--pad-page);
-  opacity: var(--opacity-muted);
-  text-align: center;
-}
-
-.empty-state i {
-  font-size: var(--font-icon-xl);
-  margin-bottom: var(--gap-inline);
-}
 </style>

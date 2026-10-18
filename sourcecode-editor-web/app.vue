@@ -14,7 +14,6 @@ onMounted(() => {
 <template>
   <div id="page-layout">
     <header>
-      <VitePwaManifest />
       <Navigation />
     </header>
     <main>

@@ -4,8 +4,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: "utf-16",
-      viewport:
-        "width=device-width, initial-scale=1, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+      viewport: "width=device-width, initial-scale=1, height=device-height",
       title: "Code",
       meta: [
         { name: "description", content: "sourcecode-editor" },
@@ -14,6 +13,7 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", href: "/icon.png" },
         { rel: "stylesheet", href: "/styles.css" },
+        { rel: "manifest", href: "/manifest.webmanifest" },
       ],
     },
   },
@@ -26,22 +26,21 @@ export default defineNuxtConfig({
     autoImports: ["defineStore", "acceptHMRUpdate"],
   },
   pwa: {
-    // PWA options
-    manifest: {
-      name: "APPLICATION_TITLE",
-      short_name: "APPLICATION_TITLE",
-      lang: "en-US",
-      start_url: "/",
-      display: "standalone",
-      background_color: "#12191f",
-      theme_color: "#12191f",
-      icons: [
-        {
-          src: "images/icon.png",
-          sizes: "512x512",
-          type: "image/png",
-        },
+    registerType: "autoUpdate",
+    // The manifest is a static public file (sed-edited at container start for
+    // the application title), so it must stay out of the SW precache.
+    manifest: false,
+    workbox: {
+      // Public files are precached via explicit globs: includeAssets does not
+      // resolve Nuxt's public dir, and these files are copied into the output
+      // root that workbox globs.
+      globPatterns: [
+        "**/*.{js,css,html}",
+        "config.json",
+        "icon.png",
+        "images/icon.png",
       ],
+      navigateFallback: "/",
     },
   },
 });
