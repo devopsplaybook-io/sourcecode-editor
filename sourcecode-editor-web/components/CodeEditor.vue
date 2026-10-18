@@ -110,6 +110,16 @@ export default {
     }
   },
   methods: {
+    getSelectionInfo() {
+      if (!this.view) return null;
+      const selection = this.view.state.selection.main;
+      if (selection.empty) return null;
+      return {
+        content: this.view.state.sliceDoc(selection.from, selection.to),
+        startLine: this.view.state.doc.lineAt(selection.from).number,
+        endLine: this.view.state.doc.lineAt(selection.to).number,
+      };
+    },
     currentThemeExtension() {
       const isDark =
         document.documentElement.getAttribute("data-theme") === "dark";
