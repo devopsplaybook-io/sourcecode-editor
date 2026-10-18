@@ -8,6 +8,7 @@
           :class="store.loading ? 'bi-arrow-repeat spin' : 'bi-arrow-clockwise'"
           @click="!store.loading && refresh()"
         ></i>
+        <SyncedIndicator :ts="store.lastUpdated" />
       </h3>
       <div class="header-actions">
         <button class="secondary" @click="openAddRepoDialog()">
@@ -83,7 +84,7 @@
             </span>
             <span class="stat">
               <i class="bi bi-git-pull-request"></i>
-              {{ entry.pulls.length }} PRs
+              {{ openPulls(entry).length }} PRs
             </span>
             <span class="stat" :class="successRateClass(entry)">
               <i class="bi bi-check-circle"></i>
@@ -95,9 +96,9 @@
           <details :open="entry.expanded" @toggle="store.toggleRepo(entry)">
             <summary>
               <i class="bi bi-git-pull-request"></i>
-              Pull Requests ({{ entry.pulls.length }})
+              Pull Requests ({{ openPulls(entry).length }})
             </summary>
-            <div v-if="entry.pulls.length === 0" class="detail-empty">
+            <div v-if="openPulls(entry).length === 0" class="detail-empty">
               No open pull requests
             </div>
             <div v-for="pr in entry.pulls" :key="pr.number" class="pr-row">
@@ -126,10 +127,30 @@
               <span class="pr-actions">
                 <button
                   class="outline contrast pr-merge-btn"
+                  @click="openPRDiff(entry, pr)"
+                >
+                  <i class="bi bi-file-diff"></i> Diff
+                </button>
+                <button
+                  class="outline contrast pr-merge-btn"
                   @click="mergePR(entry.org, entry.repo, pr)"
                   :disabled="pr.draft || pr.state !== 'open'"
                 >
                   <i class="bi bi-git-merge"></i> Merge
+                </button>
+                <button
+                  v-if="pr.state === 'open'"
+                  class="outline contrast pr-merge-btn"
+                  @click="setPRState(entry.org, entry.repo, pr, 'closed')"
+                >
+                  <i class="bi bi-slash-circle"></i> Close
+                </button>
+                <button
+                  v-else
+                  class="outline contrast pr-merge-btn"
+                  @click="setPRState(entry.org, entry.repo, pr, 'open')"
+                >
+                  <i class="bi bi-arrow-counterclockwise"></i> Reopen
                 </button>
               </span>
             </div>
@@ -249,6 +270,16 @@
       @onClose="onCloseCreatePRDialog"
       @onCreate="onCreatePR"
     />
+
+    <!-- PR Diff Dialog -->
+    <DialogPRDiff
+      v-if="showPRDiffDialog"
+      :org="diffPROrg"
+      :repo="diffPRRepo"
+      :number="diffPRNumber"
+      :title="diffPRTitle"
+      @onClose="closePRDiff"
+    />
   </div>
 </template>
 
@@ -264,6 +295,11 @@ export default {
       createPROrg: "",
       createPRRepo: "",
       createPRDefaultBranch: "",
+      showPRDiffDialog: false,
+      diffPROrg: "",
+      diffPRRepo: "",
+      diffPRNumber: 0,
+      diffPRTitle: "",
       availableOrgs: [],
       availableRepos: {},
       selectedOrg: "",
@@ -352,6 +388,34 @@ export default {
         return;
       }
       await this.store.mergePR(orgName, repoName, pr.number);
+    },
+    async setPRState(orgName, repoName, pr, state) {
+      const action = state === "open" ? "reopen" : "close";
+      if (
+        !confirm(
+          `Are you sure you want to ${action} PR #${pr.number}: "${pr.title}"?`,
+        )
+      ) {
+        return;
+      }
+      await this.store.setPRState(orgName, repoName, pr.number, state);
+    },
+    openPRDiff(entry, pr) {
+      this.diffPROrg = entry.org;
+      this.diffPRRepo = entry.repo;
+      this.diffPRNumber = pr.number;
+      this.diffPRTitle = pr.title;
+      this.showPRDiffDialog = true;
+    },
+    closePRDiff() {
+      this.showPRDiffDialog = false;
+      this.diffPROrg = "";
+      this.diffPRRepo = "";
+      this.diffPRNumber = 0;
+      this.diffPRTitle = "";
+    },
+    openPulls(entry) {
+      return entry.pulls.filter((p) => p.state === "open");
     },
     async removeRepo(org, repo) {
       if (!confirm(`Remove ${org}/${repo} from watch list?`)) return;
@@ -696,6 +760,14 @@ details summary i {
   font-size: var(--font-meta);
   padding: var(--pad-button-sm);
   margin: 0;
+}
+
+.pr-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Action Row */

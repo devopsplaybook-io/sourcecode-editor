@@ -176,6 +176,35 @@ export class GitHubService {
     );
   }
 
+  static async updatePRState(
+    owner: string,
+    repo: string,
+    number: number,
+    state: "open" | "closed",
+  ): Promise<void> {
+    await axios.patch(
+      `${(await Config.get()).SERVER_URL}/github/repos/${owner}/${repo}/pulls/${number}`,
+      { state },
+      await AuthService.getAuthHeader(),
+    );
+  }
+
+  static async getPRDiff(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<string> {
+    const res = await axios.get(
+      `${(await Config.get()).SERVER_URL}/github/repos/${owner}/${repo}/pulls/${number}/diff`,
+      {
+        ...(await AuthService.getAuthHeader()),
+        responseType: "text",
+        transformResponse: [(data: string) => data],
+      },
+    );
+    return res.data;
+  }
+
   static async cloneRepo(owner: string, repo: string): Promise<void> {
     await axios.post(
       `${(await Config.get()).SERVER_URL}/github/repos/${owner}/${repo}/clone`,

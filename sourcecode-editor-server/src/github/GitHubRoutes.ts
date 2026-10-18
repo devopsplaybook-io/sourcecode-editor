@@ -15,6 +15,8 @@ import {
   GitHubGetLatestActions,
   GitHubCreatePull,
   GitHubMergePull,
+  GitHubGetPullDiff,
+  GitHubUpdatePullState,
   GitHubSetTokens,
 } from "./GitHubApi";
 
@@ -147,6 +149,61 @@ export class GitHubRoutes {
         return res.status(502).send({ error: "GitHub API Error" });
       }
     });
+
+    // Close or reopen a pull request
+    fastify.patch<{
+      Params: { owner: string; repo: string; number: number };
+      Body: { state: string };
+    }>("/repos/:owner/:repo/pulls/:number", async (req, res) => {
+      if (!(await AuthGetUserSession(req)).isAuthenticated) {
+        return res.status(403).send({ error: "Access Denied" });
+      }
+      if (!GitHubIsEnabled()) {
+        return res.status(501).send({ error: "GitHub Not Enabled" });
+      }
+      if (req.body.state !== "open" && req.body.state !== "closed") {
+        return res.status(400).send({ error: "Invalid: state" });
+      }
+      try {
+        await GitHubUpdatePullState(
+          req.params.owner,
+          req.params.repo,
+          req.params.number,
+          req.body.state,
+        );
+        return res.status(200).send({});
+      } catch (err) {
+        logger.error("Failed to update pull request state", err);
+        return res.status(502).send({ error: "GitHub API Error" });
+      }
+    });
+
+    // Get the unified diff of a pull request
+    fastify.get<{ Params: { owner: string; repo: string; number: number } }>(
+      "/repos/:owner/:repo/pulls/:number/diff",
+      async (req, res) => {
+        if (!(await AuthGetUserSession(req)).isAuthenticated) {
+          return res.status(403).send({ error: "Access Denied" });
+        }
+        if (!GitHubIsEnabled()) {
+          return res.status(501).send({ error: "GitHub Not Enabled" });
+        }
+        try {
+          const diff = await GitHubGetPullDiff(
+            req.params.owner,
+            req.params.repo,
+            req.params.number,
+          );
+          return res
+            .status(200)
+            .header("Content-Type", "text/plain; charset=utf-8")
+            .send(diff);
+        } catch (err) {
+          logger.error("Failed to get pull request diff", err);
+          return res.status(502).send({ error: "GitHub API Error" });
+        }
+      },
+    );
 
     // Clone a GitHub repo as a project (SSH clone)
     fastify.post<{ Params: { owner: string; repo: string } }>(

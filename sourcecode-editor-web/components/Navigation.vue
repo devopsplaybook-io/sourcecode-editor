@@ -37,6 +37,9 @@
           <span class="nav-label">GitHub</span></NuxtLink
         >
       </li>
+      <li v-if="authenticationStore.isAuthenticated">
+        <NotificationBell />
+      </li>
       <li>
         <NuxtLink
           to="/users"

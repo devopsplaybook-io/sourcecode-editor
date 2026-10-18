@@ -48,6 +48,16 @@ migration is needed.
 | File       | `file.updated`         | `{ path }`                                          |
 | File       | `file.deleted`         | `{ path }`                                          |
 | File       | `file.renamed`         | `{ oldPath, newPath }`                              |
+| GitHub     | `github.cache.updated` | `{ ts }`                                            |
+| GitHub     | `github.actions.failed`| `{ org, repo, run: { id, name, html_url, conclusion, head_branch } }` |
+| GitHub     | `github.pr.opened`     | `{ org, repo, pull: { number, title, html_url, user } }` |
+| GitHub     | `github.pr.merged`     | `{ org, repo, pull: { number, title, html_url } }`  |
+| GitHub     | `github.pr.closed`     | `{ org, repo, pull: { number, title, html_url } }`  |
+
+GitHub change events (`github.actions.failed`, `github.pr.*`) are detected
+by comparing each cache refresh with the previous snapshot; the first
+refresh after startup is a baseline and emits nothing. `repository` holds
+`"org/repo"` for these events.
 
 `<op>` is one of: `clone`, `pull`, `push`, `commit`, `checkout`,
 `reset`, `discard`, `branch.create`, `branch.delete`. `phase` is a

@@ -245,13 +245,13 @@ describe("GitHubMetrics", () => {
   });
 
   describe("observable gauges - PR count", () => {
-    test("should report PR count from cached pulls data", async () => {
+    test("should report open PR count from cached pulls data", async () => {
       const pullsDir = path.join(testDir, "github/pulls/org1");
       await fse.ensureDir(pullsDir);
       await fse.writeJson(path.join(pullsDir, "repo1.json"), [
-        { number: 1, title: "PR 1" },
-        { number: 2, title: "PR 2" },
-        { number: 3, title: "PR 3" },
+        { number: 1, title: "PR 1", state: "open" },
+        { number: 2, title: "PR 2", state: "open" },
+        { number: 3, title: "PR 3", state: "closed" },
       ]);
 
       (getWatchedRepos as jest.Mock).mockResolvedValue([
@@ -278,7 +278,7 @@ describe("GitHubMetrics", () => {
       });
 
       expect(observations).toHaveLength(1);
-      expect(observations[0].value).toBe(3);
+      expect(observations[0].value).toBe(2);
       expect(observations[0].attributes).toEqual({
         org: "org1",
         repo: "repo1",

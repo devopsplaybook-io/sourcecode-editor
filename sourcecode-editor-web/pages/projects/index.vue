@@ -3,6 +3,7 @@
     <div id="projects-actions" class="actions">
       <i class="bi bi-arrow-clockwise" v-on:click="refresh()"></i>
       <NuxtLink to="/projects/new"><i class="bi bi-plus-square"></i></NuxtLink>
+      <SyncedIndicator :ts="latestSyncTs" />
     </div>
     <article
       v-for="project in gitProjectsStore.projects"
@@ -26,6 +27,39 @@
           </span>
         </span>
       </header>
+      <div
+        v-if="githubMatch(project)"
+        class="action-controls github-linkage"
+      >
+        <NuxtLink
+          to="/github"
+          class="github-linkage-badge"
+          title="Pull requests on the GitHub page"
+        >
+          <i class="bi bi-git-pull-request"></i>
+          {{ githubOpenPRCount(githubMatch(project)) }} PRs
+        </NuxtLink>
+        <NuxtLink
+          to="/github"
+          class="github-linkage-badge"
+          :title="'Latest GitHub Actions: ' + githubActionsLabel(githubMatch(project))"
+        >
+          <i :class="githubActionsIcon(githubMatch(project))"></i>
+          Actions
+        </NuxtLink>
+        <button
+          class="secondary"
+          title="Create a pull request from the current branch"
+          :disabled="
+            !project.status?.currentBranch ||
+            gitProjectsStore.fetching ||
+            repositoryEventsStore.isBusy(project.projectId)
+          "
+          @click="openCreatePRForProject(project)"
+        >
+          <i class="bi bi-git-pull-request"></i> Create PR
+        </button>
+      </div>
       <div v-if="project.status" class="action-controls">
         <select
           class="branch-select"
@@ -182,6 +216,17 @@
       :project="selectedProject"
       @onClose="onCloseDialog()"
     />
+    <!-- Dialog for PR creation from a project card -->
+    <DialogCreatePR
+      v-if="showCreatePRDialog"
+      :org-name="createPROrg"
+      :repo-name="createPRRepo"
+      :default-branch="createPRDefaultBranch"
+      :head-options="createPRHeadOptions"
+      :preselected-head="createPRPreselectedHead"
+      @onClose="onCloseCreatePRDialog()"
+      @onCreate="onCreatePRForProject"
+    />
   </div>
 </template>
 
@@ -189,6 +234,8 @@
 const gitProjectsStore = GitProjectsStore();
 const repositoryEventsStore = RepositoryEventsStore();
 repositoryEventsStore.init();
+const gitHubStore = GitHubStore();
+gitHubStore.init();
 </script>
 
 <script>
@@ -196,6 +243,7 @@ import axios from "axios";
 import Config from "~~/services/Config.ts";
 import { handleError, EventBus, EventTypes } from "~~/services/EventBus";
 import { AuthService } from "~~/services/AuthService";
+import { RepoUrlOwnerRepoFromUrl } from "~~/services/RepoUrl";
 
 export default {
   data() {
@@ -205,13 +253,33 @@ export default {
       selectedProject: null,
       showCreateBranchDialog: false,
       showHistoryDialog: false,
+      showCreatePRDialog: false,
+      createPROrg: "",
+      createPRRepo: "",
+      createPRDefaultBranch: "main",
+      createPRHeadOptions: [],
+      createPRPreselectedHead: "",
+      fetchedTs: 0,
     };
+  },
+  computed: {
+    latestSyncTs() {
+      const statusTs = GitProjectsStore().projects.reduce(
+        (max, project) =>
+          project.status?.lastSyncTs
+            ? Math.max(max, project.status.lastSyncTs)
+            : max,
+        0,
+      );
+      return statusTs || this.fetchedTs;
+    },
   },
   async created() {
     if (!(await AuthenticationStore().ensureAuthenticated())) {
       useRouter().push({ path: "/users" });
     }
     GitProjectsStore().fetch();
+    this.fetchedTs = Date.now();
   },
   methods: {
     async cloneProject(project) {
@@ -282,10 +350,60 @@ export default {
     },
     refresh() {
       GitProjectsStore().fetch();
+      this.fetchedTs = Date.now();
       EventBus.emit(EventTypes.ALERT_MESSAGE, {
         type: "info",
         text: "Refreshing...",
       });
+    },
+    githubMatch(project) {
+      const ownerRepo = RepoUrlOwnerRepoFromUrl(project.info?.url);
+      if (!ownerRepo) return null;
+      return (
+        GitHubStore().watchedRepos.find(
+          (entry) =>
+            entry.org === ownerRepo.owner && entry.repo === ownerRepo.repo,
+        ) || null
+      );
+    },
+    githubOpenPRCount(entry) {
+      return entry.pulls.filter((p) => p.state === "open").length;
+    },
+    githubActionsIcon(entry) {
+      const completed = entry.actions.filter((r) => r.status === "completed");
+      if (completed.length === 0) return "bi bi-question-circle";
+      const successful = completed.filter((r) => r.conclusion === "success");
+      const rate = successful.length / completed.length;
+      if (rate >= 0.5) return "bi bi-check-circle-fill";
+      return "bi bi-x-circle-fill";
+    },
+    githubActionsLabel(entry) {
+      const completed = entry.actions.filter((r) => r.status === "completed");
+      if (completed.length === 0) return "unknown";
+      const successful = completed.filter((r) => r.conclusion === "success");
+      return Math.round((successful.length / completed.length) * 100) + "% success";
+    },
+    openCreatePRForProject(project) {
+      const entry = this.githubMatch(project);
+      if (!entry || !entry.repoInfo) return;
+      this.createPROrg = entry.org;
+      this.createPRRepo = entry.repo;
+      this.createPRDefaultBranch = entry.repoInfo.default_branch || "main";
+      this.createPRHeadOptions = project.status?.branches ?? [];
+      this.createPRPreselectedHead = project.status?.currentBranch || "";
+      this.showCreatePRDialog = true;
+    },
+    onCloseCreatePRDialog() {
+      this.showCreatePRDialog = false;
+      this.createPROrg = "";
+      this.createPRRepo = "";
+      this.createPRDefaultBranch = "main";
+      this.createPRHeadOptions = [];
+      this.createPRPreselectedHead = "";
+    },
+    async onCreatePRForProject(orgName, repoName, title, head, base) {
+      await GitHubStore().createPR(orgName, repoName, title, head, base);
+      this.onCloseCreatePRDialog();
     },
     async onBranchSelect(project, event) {
       const branch = event.target.value;
@@ -468,5 +586,27 @@ export default {
   align-items: center;
   gap: var(--gap-tight);
   margin-left: var(--gap-inline);
+}
+
+.github-linkage {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-inline);
+  flex-wrap: wrap;
+}
+.github-linkage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--font-icon);
+  text-decoration: none;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0 0.3em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.github-linkage-badge:hover {
+  opacity: 1;
 }
 </style>

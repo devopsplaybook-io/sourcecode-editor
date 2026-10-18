@@ -181,5 +181,23 @@ export const GitHubStore = defineStore("GitHubStore", {
         handleError(err);
       }
     },
+
+    async setPRState(
+      orgName: string,
+      repoName: string,
+      prNumber: number,
+      state: "open" | "closed",
+    ): Promise<void> {
+      try {
+        await GitHubService.updatePRState(orgName, repoName, prNumber, state);
+        EventBus.emit(EventTypes.ALERT_MESSAGE, {
+          type: "info",
+          text: `PR #${prNumber} ${state === "open" ? "reopened" : "closed"} in ${orgName}/${repoName}`,
+        });
+        await this.fetchWatchedRepos();
+      } catch (err) {
+        handleError(err);
+      }
+    },
   },
 });
