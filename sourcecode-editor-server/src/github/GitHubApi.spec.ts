@@ -4,6 +4,10 @@ import {
   GitHubIsEnabled,
   GitHubGetRepoInfo,
   GitHubListRepos,
+  GitHubListPulls,
+  GitHubGetPull,
+  GitHubUpdatePullState,
+  GitHubGetPullDiff,
   GitHubRepo,
 } from "./GitHubApi";
 
@@ -218,6 +222,110 @@ describe("GitHubApi", () => {
       const orgs = await GitHubListRepos();
       expect(orgs).toEqual({});
       expect(mockedAxios.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GitHubListPulls", () => {
+    test("should list all pull requests sorted by update time", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      mockedAxios.get.mockResolvedValue({ data: [] });
+
+      await GitHubListPulls("myorg", "my-repo");
+
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "https://api.github.com/repos/myorg/my-repo/pulls",
+        expect.objectContaining({
+          params: { state: "all", sort: "updated", per_page: 20 },
+        }),
+      );
+    });
+  });
+
+  describe("GitHubGetPull", () => {
+    test("should fetch a single pull request with merged flag", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      const pullData = { number: 7, title: "A PR", merged: true };
+      mockedAxios.get.mockResolvedValue({ data: pullData });
+
+      const result = await GitHubGetPull("myorg", "my-repo", 7);
+
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "https://api.github.com/repos/myorg/my-repo/pulls/7",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer ghp_test_token",
+          }),
+        }),
+      );
+      expect(result).toEqual(pullData);
+      expect(result.merged).toBe(true);
+    });
+
+    test("should propagate HTTP errors from GitHub API", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      mockedAxios.get.mockRejectedValue(new Error("Request failed"));
+
+      await expect(GitHubGetPull("myorg", "my-repo", 7)).rejects.toThrow(
+        "Request failed",
+      );
+    });
+  });
+
+  describe("GitHubUpdatePullState", () => {
+    test("should patch the pull request state", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      mockedAxios.patch.mockResolvedValue({ data: {} });
+
+      await GitHubUpdatePullState("myorg", "my-repo", 7, "closed");
+
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "https://api.github.com/repos/myorg/my-repo/pulls/7",
+        { state: "closed" },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer ghp_test_token",
+          }),
+        }),
+      );
+    });
+
+    test("should propagate HTTP errors from GitHub API", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      mockedAxios.patch.mockRejectedValue(httpError(422));
+
+      await expect(
+        GitHubUpdatePullState("myorg", "my-repo", 7, "open"),
+      ).rejects.toThrow("Request failed with status code 422");
+    });
+  });
+
+  describe("GitHubGetPullDiff", () => {
+    test("should fetch the unified diff with the diff Accept header", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      const diff = "diff --git a/file.txt b/file.txt\n+++ b/file.txt";
+      mockedAxios.get.mockResolvedValue({ data: diff });
+
+      const result = await GitHubGetPullDiff("myorg", "my-repo", 7);
+
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "https://api.github.com/repos/myorg/my-repo/pulls/7",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Accept: "application/vnd.github.v3.diff",
+            Authorization: "Bearer ghp_test_token",
+          }),
+        }),
+      );
+      expect(result).toBe(diff);
+    });
+
+    test("should propagate HTTP errors from GitHub API", async () => {
+      GitHubSetTokens(["ghp_test_token"]);
+      mockedAxios.get.mockRejectedValue(new Error("Request failed"));
+
+      await expect(GitHubGetPullDiff("myorg", "my-repo", 7)).rejects.toThrow(
+        "Request failed",
+      );
     });
   });
 });

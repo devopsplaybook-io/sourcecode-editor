@@ -124,8 +124,10 @@ async function GitHubMetricsUpdateStats(): Promise<void> {
     try {
       const pullsPath = path.join(cacheDir, "pulls", org, `${repo}.json`);
       if (await fse.pathExists(pullsPath)) {
-        const pulls = (await fse.readJson(pullsPath)) as unknown[];
-        statsPRCount[key] = pulls.length;
+        const pulls = (await fse.readJson(pullsPath)) as {
+          state?: string;
+        }[];
+        statsPRCount[key] = pulls.filter((p) => p.state === "open").length;
       }
     } catch (err) {
       logger.warn(`Failed to read PRs for ${key}`, err);

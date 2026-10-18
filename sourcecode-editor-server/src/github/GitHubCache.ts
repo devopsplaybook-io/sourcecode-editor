@@ -6,11 +6,15 @@ import {
   GitHubGetRepoInfo,
   GitHubListPulls,
   GitHubGetLatestActions,
+  GitHubGetPull,
   GitHubListBranches,
   GitHubSetTokens,
   GitHubIsEnabled,
   GitHubRepo,
+  GitHubPR,
+  GitHubActionRun,
 } from "./GitHubApi";
+import { DetectNewPulls, DetectDisappearedPulls, DetectNewFailedRuns } from "./GitHubChangeDetector";
 import { getWatchedRepos, WatchedReposInit } from "./WatchedRepos";
 import { OTelLogger, OTelTracer } from "../OTelContext";
 import { EventBusEmit } from "../events/EventBus";
@@ -20,6 +24,90 @@ const logger = OTelLogger().createModuleLogger("GitHubCache");
 
 let config: Config;
 let cacheDir: string;
+
+async function readJsonOrNull<T>(filePath: string): Promise<T | null> {
+  try {
+    return (await fse.readJson(filePath)) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function emitFailedRuns(
+  org: string,
+  repo: string,
+  previous: GitHubActionRun[] | null,
+  next: GitHubActionRun[],
+): Promise<void> {
+  for (const run of DetectNewFailedRuns(previous, next)) {
+    EventBusEmit({
+      repository: `${org}/${repo}`,
+      eventType: RepositoryEventTypes.GITHUB_ACTIONS_FAILED,
+      eventDetail: {
+        org,
+        repo,
+        run: {
+          id: run.id,
+          name: run.name,
+          html_url: run.html_url,
+          conclusion: run.conclusion,
+          head_branch: run.head_branch,
+        },
+      },
+    });
+  }
+}
+
+async function emitPullChanges(
+  org: string,
+  repo: string,
+  previous: GitHubPR[] | null,
+  next: GitHubPR[],
+): Promise<void> {
+  const key = `${org}/${repo}`;
+  for (const pull of DetectNewPulls(previous, next)) {
+    EventBusEmit({
+      repository: key,
+      eventType: RepositoryEventTypes.GITHUB_PR_OPENED,
+      eventDetail: {
+        org,
+        repo,
+        pull: {
+          number: pull.number,
+          title: pull.title,
+          html_url: pull.html_url,
+          user: pull.user?.login,
+        },
+      },
+    });
+  }
+  for (const pull of DetectDisappearedPulls(previous, next)) {
+    // Best-effort lookup to distinguish merged from closed.
+    try {
+      const full = await GitHubGetPull(org, repo, pull.number);
+      EventBusEmit({
+        repository: key,
+        eventType:
+          full.merged === true
+            ? RepositoryEventTypes.GITHUB_PR_MERGED
+            : RepositoryEventTypes.GITHUB_PR_CLOSED,
+        eventDetail: {
+          org,
+          repo,
+          pull: {
+            number: full.number,
+            title: full.title,
+            html_url: full.html_url,
+          },
+        },
+      });
+    } catch (err) {
+      logger.warn(
+        `Could not resolve outcome of PR #${pull.number} in ${key}: ${err.message}`,
+      );
+    }
+  }
+}
 
 export async function GitHubCacheInit(
   context: Span,
@@ -112,24 +200,24 @@ export async function GitHubCacheRefresh(context: Span): Promise<void> {
 
       // Fetch PRs
       try {
+        const pullsPath = path.join(pullsDir, orgName, `${repoName}.json`);
+        const previousPulls = await readJsonOrNull<GitHubPR[]>(pullsPath);
         const pulls = await GitHubListPulls(orgName, repoName);
-        await fse.writeJson(
-          path.join(pullsDir, orgName, `${repoName}.json`),
-          pulls,
-          { spaces: 2 },
-        );
+        await emitPullChanges(orgName, repoName, previousPulls, pulls);
+        await fse.writeJson(pullsPath, pulls, { spaces: 2 });
       } catch (err) {
         logger.warn(`Failed to fetch PRs for ${key}: ${err.message}`, span);
       }
 
       // Fetch Actions
       try {
-        const actions = await GitHubGetLatestActions(orgName, repoName);
-        await fse.writeJson(
-          path.join(actionsDir, orgName, `${repoName}.json`),
-          actions,
-          { spaces: 2 },
+        const actionsPath = path.join(actionsDir, orgName, `${repoName}.json`);
+        const previousActions = await readJsonOrNull<GitHubActionRun[]>(
+          actionsPath,
         );
+        const actions = await GitHubGetLatestActions(orgName, repoName);
+        await emitFailedRuns(orgName, repoName, previousActions, actions);
+        await fse.writeJson(actionsPath, actions, { spaces: 2 });
       } catch (err) {
         logger.warn(`Failed to fetch actions for ${key}: ${err.message}`, span);
       }
@@ -189,12 +277,13 @@ export async function GitHubCacheRefreshSingle(
 
     // Refresh actions only for the single repo
     try {
-      const actions = await GitHubGetLatestActions(org, repo);
-      await fse.writeJson(
-        path.join(cacheDir, "actions", org, `${repo}.json`),
-        actions,
-        { spaces: 2 },
+      const actionsPath = path.join(cacheDir, "actions", org, `${repo}.json`);
+      const previousActions = await readJsonOrNull<GitHubActionRun[]>(
+        actionsPath,
       );
+      const actions = await GitHubGetLatestActions(org, repo);
+      await emitFailedRuns(org, repo, previousActions, actions);
+      await fse.writeJson(actionsPath, actions, { spaces: 2 });
       logger.info(`Refreshed actions for ${org}/${repo}`, span);
     } catch (err) {
       logger.error(`Failed to refresh actions for ${org}/${repo}`, err, span);

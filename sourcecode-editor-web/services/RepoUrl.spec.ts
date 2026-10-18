@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { RepoUrlIsValid, RepoUrlNameFromUrl } from "./RepoUrl";
+import {
+  RepoUrlIsValid,
+  RepoUrlNameFromUrl,
+  RepoUrlOwnerRepoFromUrl,
+} from "./RepoUrl";
 
 describe("RepoUrlIsValid", () => {
   it("accepts https, ssh and scp-like URLs", () => {
@@ -53,5 +57,66 @@ describe("RepoUrlNameFromUrl", () => {
   it("returns empty for empty URLs", () => {
     expect(RepoUrlNameFromUrl("")).toBe("");
     expect(RepoUrlNameFromUrl("   ")).toBe("");
+  });
+});
+
+describe("RepoUrlOwnerRepoFromUrl", () => {
+  it("parses https URLs with and without .git", () => {
+    expect(RepoUrlOwnerRepoFromUrl("https://github.com/owner/repo.git")).toEqual(
+      { owner: "owner", repo: "repo" },
+    );
+    expect(RepoUrlOwnerRepoFromUrl("https://github.com/owner/repo")).toEqual({
+      owner: "owner",
+      repo: "repo",
+    });
+    expect(RepoUrlOwnerRepoFromUrl("http://github.com/owner/repo")).toEqual({
+      owner: "owner",
+      repo: "repo",
+    });
+  });
+
+  it("parses scp-like URLs", () => {
+    expect(RepoUrlOwnerRepoFromUrl("git@github.com:owner/repo.git")).toEqual({
+      owner: "owner",
+      repo: "repo",
+    });
+    expect(RepoUrlOwnerRepoFromUrl("git@github.com:owner/repo")).toEqual({
+      owner: "owner",
+      repo: "repo",
+    });
+  });
+
+  it("parses ssh:// URLs with optional port", () => {
+    expect(RepoUrlOwnerRepoFromUrl("ssh://git@github.com/owner/repo.git")).toEqual(
+      { owner: "owner", repo: "repo" },
+    );
+    expect(
+      RepoUrlOwnerRepoFromUrl("ssh://git@github.com:2222/owner/repo.git"),
+    ).toEqual({ owner: "owner", repo: "repo" });
+  });
+
+  it("strips trailing slashes", () => {
+    expect(RepoUrlOwnerRepoFromUrl("https://github.com/owner/repo/")).toEqual({
+      owner: "owner",
+      repo: "repo",
+    });
+  });
+
+  it("returns null for non-GitHub hosts", () => {
+    expect(RepoUrlOwnerRepoFromUrl("https://gitlab.com/owner/repo.git")).toBe(
+      null,
+    );
+    expect(RepoUrlOwnerRepoFromUrl("git@gitlab.com:owner/repo.git")).toBe(null);
+    expect(RepoUrlOwnerRepoFromUrl("ssh://git@gitlab.com/owner/repo.git")).toBe(
+      null,
+    );
+  });
+
+  it("returns null for garbage input", () => {
+    expect(RepoUrlOwnerRepoFromUrl("")).toBe(null);
+    expect(RepoUrlOwnerRepoFromUrl("   ")).toBe(null);
+    expect(RepoUrlOwnerRepoFromUrl("github.com/owner/repo")).toBe(null);
+    expect(RepoUrlOwnerRepoFromUrl("https://github.com/justone")).toBe(null);
+    expect(RepoUrlOwnerRepoFromUrl("/local/path/repo")).toBe(null);
   });
 });

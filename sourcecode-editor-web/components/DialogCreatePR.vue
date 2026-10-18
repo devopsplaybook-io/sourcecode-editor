@@ -24,7 +24,21 @@
         <div class="dialog-row">
           <div class="dialog-field">
             <label for="pr-head">Head branch</label>
+            <select
+              v-if="headOptions.length > 0"
+              id="pr-head"
+              v-model="head"
+            >
+              <option
+                v-for="branch in headOptions"
+                :key="branch"
+                :value="branch"
+              >
+                {{ branch }}
+              </option>
+            </select>
             <input
+              v-else
               id="pr-head"
               v-model="head"
               type="text"
@@ -63,12 +77,14 @@ export default {
     orgName: { type: String, required: true },
     repoName: { type: String, required: true },
     defaultBranch: { type: String, default: "main" },
+    headOptions: { type: Array, default: () => [] },
+    preselectedHead: { type: String, default: "" },
   },
   emits: ["onClose", "onCreate"],
   data() {
     return {
       title: "",
-      head: "",
+      head: this.preselectedHead || this.headOptions[0] || "",
       base: this.defaultBranch || "main",
     };
   },

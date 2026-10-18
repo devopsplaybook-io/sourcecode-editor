@@ -174,10 +174,60 @@ export async function GitHubListPulls(
       `https://api.github.com/repos/${owner}/${repo}/pulls`,
       {
         headers: apiHeaders(token),
-        params: { state: "open", per_page: 20 },
+        params: { state: "all", sort: "updated", per_page: 20 },
       },
     );
     return res.data as GitHubPR[];
+  });
+}
+
+export async function GitHubGetPull(
+  owner: string,
+  repo: string,
+  pullNumber: number,
+): Promise<GitHubPR & { merged?: boolean }> {
+  return withOwnerToken(owner, async (token) => {
+    const res = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`,
+      {
+        headers: apiHeaders(token),
+      },
+    );
+    return res.data as GitHubPR & { merged?: boolean };
+  });
+}
+
+export async function GitHubUpdatePullState(
+  owner: string,
+  repo: string,
+  pullNumber: number,
+  state: "closed" | "open",
+): Promise<void> {
+  await withOwnerToken(owner, async (token) => {
+    await axios.patch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`,
+      { state },
+      { headers: apiHeaders(token) },
+    );
+  });
+}
+
+export async function GitHubGetPullDiff(
+  owner: string,
+  repo: string,
+  pullNumber: number,
+): Promise<string> {
+  return withOwnerToken(owner, async (token) => {
+    const res = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`,
+      {
+        headers: {
+          ...apiHeaders(token),
+          Accept: "application/vnd.github.v3.diff",
+        },
+      },
+    );
+    return res.data as string;
   });
 }
 

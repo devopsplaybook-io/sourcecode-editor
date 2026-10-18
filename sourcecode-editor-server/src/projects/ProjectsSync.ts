@@ -97,6 +97,8 @@ export async function ProjectsSyncStartProject(
       projectStatus.branchStatus = await GitGetBranchStatus(span, project);
     }
 
+    projectStatus.lastSyncTs = Date.now();
+
     // Emit a single fat status event so clients refresh without an HTTP roundtrip.
     EventBusEmit({
       repository: project.projectId,
