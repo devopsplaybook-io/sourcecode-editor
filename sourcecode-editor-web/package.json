@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@vite-pwa/nuxt": "^1.1.1",
-    "nuxt": "4.6.1",
+    "nuxt": "4.6.3",
     "vitest": "^5.0.5"
   },
   "dependencies": {
@@ -26,8 +26,8 @@
     "@picocss/pico": "^2.1.1",
     "@pinia/nuxt": "^1.0.3",
     "@vueuse/core": "^15.0.0",
-    "apexcharts": "^8.3.0",
-    "axios": "^1.20.0",
+    "apexcharts": "^8.7.0",
+    "axios": "^1.21.0",
     "bootstrap-icons": "^1.13.2",
     "codemirror": "^6.0.2",
     "jwt-decode": "^4.0.0",

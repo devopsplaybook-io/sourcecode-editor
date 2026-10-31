@@ -33,7 +33,7 @@ export async function FilesProjectDelete(
     throw err;
   }
 }
-import { Span } from "@opentelemetry/sdk-trace-base";
+import { Span } from "@opentelemetry/sdk-trace";
 import { Project } from "../model/Project";
 import { OTelTracer } from "../OTelContext";
 import { Config } from "../Config";

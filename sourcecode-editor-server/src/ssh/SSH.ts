@@ -1,4 +1,4 @@
-import { Span } from "@opentelemetry/sdk-trace-base";
+import { Span } from "@opentelemetry/sdk-trace";
 import { ensureDir } from "fs-extra";
 import fs from "fs/promises";
 import path from "path";
