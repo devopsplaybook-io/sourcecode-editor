@@ -30,7 +30,8 @@ export default defineNuxtConfig({
     // The manifest is a static public file (sed-edited at container start for
     // the application title), so it must stay out of the SW precache.
     manifest: false,
-    workbox: {
+    // @vite-pwa/nuxt v2 renamed the deprecated `workbox` option to `generateSW`.
+    generateSW: {
       // Public files are precached via explicit globs: includeAssets does not
       // resolve Nuxt's public dir, and these files are copied into the output
       // root that workbox globs.
