@@ -53,9 +53,7 @@
 </template>
 
 <script setup>
-import { AuthService } from "~~/services/AuthService";
 import { PreferencesService } from "~/services/PreferencesService";
-const authenticationStore = AuthenticationStore();
 const gitHubStore = GitHubStore();
 
 // Initialize GitHub store on mount
@@ -63,8 +61,7 @@ gitHubStore.init();
 </script>
 
 <script>
-import axios from "axios";
-import Config from "~~/services/Config.ts";
+import { SessionRenewalStart } from "~~/services/SessionRenewal";
 
 export default {
   watch: {
@@ -75,26 +72,22 @@ export default {
   data() {
     return {
       activeRoute: "",
+      stopSessionRenewal: null,
     };
   },
   async created() {
     this.routeUpdated(this.$route);
-    if (await AuthenticationStore().ensureAuthenticated()) {
-      setTimeout(async () => {
-        // Renew session tocken
-        axios
-          .post(
-            `${(await Config.get()).SERVER_URL}/users/session`,
-            {},
-            await AuthService.getAuthHeader(),
-          )
-          .then((res) => {
-            AuthService.saveToken(res.data.token);
-          });
-      }, 10000);
-    }
+    // Sliding session: renew on start, on focus/visibilitychange and when
+    // less than 20% of the token lifetime remains.
+    this.stopSessionRenewal = SessionRenewalStart();
     GitProjectsStore().fetch();
     PreferencesService.applyTheme();
+  },
+  beforeUnmount() {
+    if (this.stopSessionRenewal) {
+      this.stopSessionRenewal();
+      this.stopSessionRenewal = null;
+    }
   },
   methods: {
     routeUpdated(newRoute) {

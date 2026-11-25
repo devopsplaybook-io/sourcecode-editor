@@ -1,7 +1,11 @@
 import { OTelRequestSpan } from "@devopsplaybook.io/otel-utils-fastify";
 import { FastifyInstance } from "fastify";
 import { User } from "../model/User";
-import { AuthGenerateJWT, AuthGetUserSession } from "./Auth";
+import {
+  AuthGenerateJWT,
+  AuthGetSessionStartedAt,
+  AuthGetUserSession,
+} from "./Auth";
 import {
   UserPasswordCheckPassword,
   UserPasswordSetPassword,
@@ -40,7 +44,10 @@ export class UsersRoutes {
         user = await UsersDataGet(OTelRequestSpan(req), userSession.userId);
         return res
           .status(201)
-          .send({ success: true, token: await AuthGenerateJWT(user) });
+          .send({
+            success: true,
+            token: await AuthGenerateJWT(user, AuthGetSessionStartedAt(req)),
+          });
       }
 
       // From User/Pass
