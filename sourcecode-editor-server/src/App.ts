@@ -1,4 +1,5 @@
 import { StandardMeter, StandardTracer } from "@devopsplaybook.io/otel-utils";
+import { AuthSessionPolicyLog } from "@devopsplaybook.io/common-utils";
 import { StandardTracerFastifyRegisterHooks } from "@devopsplaybook.io/otel-utils-fastify";
 import Fastify, { FastifyInstance } from "fastify";
 import { watchFile } from "fs-extra";
@@ -37,6 +38,10 @@ Promise.resolve().then(async () => {
   //
   const config = new Config();
   await config.reload();
+  AuthSessionPolicyLog(config, {
+    app: "sourcecode-editor",
+    logger: (msg) => logger.info(msg),
+  });
   watchFile(config.CONFIG_FILE, () => {
     logger.info(`Config updated: ${config.CONFIG_FILE}`);
     config.reload();
