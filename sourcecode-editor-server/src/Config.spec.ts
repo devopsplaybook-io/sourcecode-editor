@@ -1,6 +1,11 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import {
+  AuthSessionPolicyCheck,
+  AuthSessionPolicyLog,
+  ConfigBase,
+} from "@devopsplaybook.io/common-utils";
 import { Config, ConfigGitHubTokens } from "./Config";
 
 jest.mock("./OTelContext", () => ({
@@ -66,6 +71,58 @@ describe("Config", () => {
 
       expect(config.JWT_VALIDITY_DURATION).toBe(2592000);
       expect(config.JWT_SESSION_MAX_DURATION).toBe(7776000);
+    });
+
+    test("matches the documented auth session policy", async () => {
+      const config = newConfig();
+      await config.reload();
+
+      const result = AuthSessionPolicyCheck(config, {
+        app: "sourcecode-editor",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    test("logs the intended values and the policy line at startup", async () => {
+      const config = newConfig();
+      const lines: string[] = [];
+      // The Config wrapper hard-codes its logger; call the base reload to
+      // capture the same configuration lines the app logs at startup.
+      await ConfigBase.prototype.reload.call(config, (message: string) =>
+        lines.push(message),
+      );
+      AuthSessionPolicyLog(config, {
+        app: "sourcecode-editor",
+        logger: (message) => lines.push(message),
+      });
+
+      expect(lines).toContain(
+        "Configuration Value: JWT_VALIDITY_DURATION: 2592000 (from defaults)",
+      );
+      expect(lines).toContain(
+        "Configuration Value: JWT_SESSION_MAX_DURATION: 7776000 (from defaults)",
+      );
+      expect(lines).toContain(
+        "Auth session policy: app=sourcecode-editor validity=2592000s cap=7776000s renewal=sliding status=ok",
+      );
+    });
+
+    test("reports an error line for a regressed configuration", async () => {
+      process.env.JWT_VALIDITY_DURATION = "60";
+      const config = newConfig();
+      const lines: string[] = [];
+      await config.reload();
+      const result = AuthSessionPolicyLog(config, {
+        app: "sourcecode-editor",
+        logger: (message) => lines.push(message),
+      });
+
+      expect(result.ok).toBe(false);
+      expect(lines[0]).toContain("status=error");
+      expect(
+        lines.some((line) => line.startsWith("Auth session policy error:")),
+      ).toBe(true);
     });
 
     test("environment values override the defaults", async () => {

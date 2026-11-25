@@ -124,5 +124,6 @@ All three commands must pass before committing.
 
 - **uuid ESM**: `uuid` v14+ ships ESM. Jest config keeps `transformIgnorePatterns: ["/node_modules/(?!(uuid)/)"]` so `@swc/jest` transforms it (the transform regex includes `.js`); `allowJs: true` in `tsconfig.spec.json` also applies.
 - **better-sqlite3 is synchronous**: Never `await` DB calls from common-utils `SqlDbUtils*` or `DbUtilsNoTelemetry*` functions.
+- **Auth session policy**: `JWT_VALIDITY_DURATION`/`JWT_SESSION_MAX_DURATION` are validated at startup with `AuthSessionPolicyLog` and documented in the [common-utils auth session policy](https://github.com/devopsplaybook-io/common-utils/blob/main/docs/auth-session-policy.md); `Config.spec.ts` fails if the effective values drift. A subclass field is ignored unless re-registered with `addConfigField` when using common-utils `<= 2.9.2` (honoured from 2.10.1); keep renewal thresholds below the token lifetime.
 - **SystemCommandExecute signature**: Does NOT accept a `Span` first argument. Pass only `(command, options?)`.
 - **Git operations**: All `SystemCommandExecute` calls in `Git.ts` and `SSH.ts` use command strings only (no span parameter).

@@ -54,7 +54,9 @@ Configuration can be provided via a JSON configuration file (using the ConfigMap
 
 See the [ConfigMap YAML](docs/deployments/kubernetes/sourcecode-editor/base/configmap.yaml) for an example configuration.
 
-Sessions slide: the web client renews its token on startup, when the tab becomes visible or the window is focused, and once less than 20% of the token lifetime remains. A session is capped at `JWT_SESSION_MAX_DURATION` (90 days) from the first login, after which the user signs in again.
+Sessions slide: the web client renews its token on startup, when the tab becomes visible or the window is focused, and once less than 20% of the token lifetime remains. A session is capped at `JWT_SESSION_MAX_DURATION` (90 days) from the first login, after which the user signs in again. The single source of truth for every application is the [common-utils auth session policy](https://github.com/devopsplaybook-io/common-utils/blob/main/docs/auth-session-policy.md); the server logs `Auth session policy: app=sourcecode-editor validity=2592000s cap=7776000s renewal=sliding status=ok` at startup.
+
+> **Session-config pitfall**: `JWT_VALIDITY_DURATION` declared in a `Config` subclass is ignored unless re-registered with `addConfigField` after assignment when using common-utils `<= 2.9.2`; from 2.10.1 it is honoured. Renewal thresholds must stay below the token lifetime.
 
 | Parameter                                               | Description                              | Default                                   | Availability                        |
 | ------------------------------------------------------- | ---------------------------------------- | ----------------------------------------- | ----------------------------------- |
