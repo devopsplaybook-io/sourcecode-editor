@@ -54,12 +54,15 @@ Configuration can be provided via a JSON configuration file (using the ConfigMap
 
 See the [ConfigMap YAML](docs/deployments/kubernetes/sourcecode-editor/base/configmap.yaml) for an example configuration.
 
+Sessions slide: the web client renews its token on startup, when the tab becomes visible or the window is focused, and once less than 20% of the token lifetime remains. A session is capped at `JWT_SESSION_MAX_DURATION` (90 days) from the first login, after which the user signs in again.
+
 | Parameter                                               | Description                              | Default                                   | Availability                        |
 | ------------------------------------------------------- | ---------------------------------------- | ----------------------------------------- | ----------------------------------- |
 | APPLICATION_TITLE                                       | Name of the application (for PWA)        | Code                                      | Environment variable                |
 | DATA_DIR                                                | Directory for persistent data storage    | /data                                     | Config file or environment variable |
 | JWT_KEY                                                 | Secret key for JWT token signing         | (auto)                                    | Config file or environment variable |
-| JWT_VALIDITY_DURATION                                   | JWT token validity duration in seconds   | 8035200                                   | Config file or environment variable |
+| JWT_VALIDITY_DURATION                                   | JWT token validity duration in seconds   | 2592000                                   | Config file or environment variable |
+| JWT_SESSION_MAX_DURATION                                | Absolute session lifetime in seconds from the first login (0 disables the cap) | 7776000 | Config file or environment variable |
 | CORS_POLICY_ORIGIN                                      | CORS allowed origin                      | \*                                        | Config file or environment variable |
 | PROJECTS_SYNC_FREQUENCY                                 | Frequency (in ms) to sync project status | 3600000                                   | Config file or environment variable |
 | GIT_USERNAME                                            | Default Git username for operations      | (empty)                                   | Config file or environment variable |
