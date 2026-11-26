@@ -54,6 +54,7 @@ sourcecode-editor/
         UserPassword.ts            # bcrypt password hashing
         UsersData.ts               # CRUD operations on users table
         UsersRoutes.ts             # User/login API routes
+        LoginCodes.ts              # Cross-device "login with a code" routes options
       utils-std-ts/                # Shared utility re-exports & project-specific helpers
         SqlDbUtils.ts              # Re-exports from @devopsplaybook.io/common-utils
         SqlDbUtilsNoTelemetry.ts   # Re-exports from @devopsplaybook.io/common-utils
@@ -65,6 +66,7 @@ sourcecode-editor/
       init-0000.sql                # metadata table (required by convention)
       init-0001.sql                # users table
       init-0002.sql                # projects table
+      init-0003.sql                # login-code (users_login_codes) table
   sourcecode-editor-web/           # Nuxt 3 frontend
   sourcecode-editor-proxy/         # Traefik proxy config
   .github/workflows/               # CI/CD (reusable workflows from common-utils)
@@ -96,7 +98,7 @@ sourcecode-editor/
 
 ## Architecture Notes
 
-- **Config**: Extends `ConfigBase` (3-layer: env > config.json > defaults). Project-specific fields: `PROJECTS_SYNC_FREQUENCY`, `GIT_USERNAME`, `GIT_EMAIL`, `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`, `GITHUB_TOKEN`, `GITHUB_TOKENS`, `GITHUB_SYNC_FREQUENCY`.
+- **Config**: Extends `ConfigBase` (3-layer: env > config.json > defaults). Project-specific fields: `PROJECTS_SYNC_FREQUENCY`, `GIT_USERNAME`, `GIT_EMAIL`, `LLM_API_KEY`, `LLM_API_URL`, `LLM_MODEL`, `GITHUB_TOKEN`, `GITHUB_TOKENS`, `GITHUB_SYNC_FREQUENCY`. The `LOGIN_CODE_*` fields (including `LOGIN_CODE_ENABLED`, default `false`) are inherited from `ConfigBase`; when enabled, `/api/users/login-codes` is mounted at boot.
 - **GitHub multi-token**: `GITHUB_TOKEN` (legacy single token) and `GITHUB_TOKENS` (JSON array) are merged by `ConfigGitHubTokens(config)` into an ordered, deduplicated list synced into `GitHubApi` via `GitHubSetTokens()`. `GitHubListRepos()` merges `/user/repos` across all tokens (dedupe by repo id); repo-scoped calls resolve the token per owner (cache with 401/403/404 fallback).
 - **OTelContext**: Wraps `createOTelContext()` from common-utils. Exports backward-compatible functions (`OTelLogger()`, `OTelTracer()`, `OTelMeter()`, `OTelSetTracer()`, `OTelSetMeter()`).
 - **DB initialization**: `App.ts` calls `SqlDbUtilsSetOTel()` and `DbUtilsNoTelemetrySetLogger()` before `SqlDbUtilsInit(span, config, sqlDir)`.
