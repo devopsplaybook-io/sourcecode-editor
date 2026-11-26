@@ -10,7 +10,9 @@ module.exports = {
       },
     ],
   },
-  transformIgnorePatterns: ["/node_modules/(?!(uuid)/)"],
+  // uuid ships ESM; cookie (used by Fastify's light-my-request inject) is
+  // ESM-only too, so both must go through the swc transform.
+  transformIgnorePatterns: ["/node_modules/(?!(uuid|cookie)/)"],
   coverageProvider: "v8",
   testMatch: ["/**/src/**/*.spec.(ts|js)"],
   testEnvironment: "node",

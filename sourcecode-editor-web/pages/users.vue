@@ -144,12 +144,53 @@
           Switch to {{ isDark ? "Light" : "Dark" }} Mode
         </button>
       </article>
+
+      <!-- Authorize a device sign-in -->
+      <article v-if="loginCodeAvailable">
+        <AuthorizeDeviceCard
+          :service="loginCodeService"
+          variant="plain"
+          :heading-level="3"
+        />
+      </article>
     </div>
+
+    <!-- NOT AUTHENTICATED: sign in with a code -->
+    <article
+      v-if="!authenticationStore.isAuthenticated && isInitialized && loginCodeAvailable"
+      class="profile-card"
+    >
+      <LoginWithCodeCard
+        :service="loginCodeService"
+        variant="plain"
+        :heading-level="3"
+        @approved="onLoginCodeApproved"
+      />
+    </article>
   </div>
 </template>
 
 <script setup>
+import AuthorizeDeviceCard from "@devopsplaybook.io/common-web/components/AuthorizeDeviceCard.vue";
+import LoginWithCodeCard from "@devopsplaybook.io/common-web/components/LoginWithCodeCard.vue";
+import {
+  createLoginCodeService,
+  isLoginCodeAvailable,
+} from "~~/utils/loginCodes";
+
 const authenticationStore = AuthenticationStore();
+const loginCodeService = createLoginCodeService();
+const loginCodeAvailable = ref(false);
+
+onMounted(async () => {
+  loginCodeAvailable.value = await isLoginCodeAvailable(loginCodeService);
+});
+
+async function onLoginCodeApproved() {
+  // The service's onSession already stored the redeemed token.
+  await AuthenticationStore().refreshFromToken();
+  useRouter().push({ path: "/" });
+}
 </script>
 
 <script>

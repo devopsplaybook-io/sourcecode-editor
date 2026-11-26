@@ -1,5 +1,8 @@
 import { StandardMeter, StandardTracer } from "@devopsplaybook.io/otel-utils";
-import { AuthSessionPolicyLog } from "@devopsplaybook.io/common-utils";
+import {
+  AuthSessionPolicyLog,
+  LoginCodesRoutes,
+} from "@devopsplaybook.io/common-utils";
 import { StandardTracerFastifyRegisterHooks } from "@devopsplaybook.io/otel-utils-fastify";
 import Fastify, { FastifyInstance } from "fastify";
 import { watchFile } from "fs-extra";
@@ -13,6 +16,7 @@ import {
 } from "./OTelContext";
 import { AuthInit } from "./users/Auth";
 import { UsersRoutes } from "./users/UsersRoutes";
+import { LoginCodesBuildRoutesOptions } from "./users/LoginCodes";
 import { SqlDbUtilsSetOTel, SqlDbUtilsInit } from "./utils-std-ts/SqlDbUtils";
 import { DbUtilsNoTelemetrySetLogger } from "./utils-std-ts/SqlDbUtilsNoTelemetry";
 import { SSHInit } from "./ssh/SSH";
@@ -102,6 +106,16 @@ Promise.resolve().then(async () => {
   fastify.register(new UsersRoutes().getRoutes, {
     prefix: "/api/users",
   });
+  // Cross-device "login with a code". The flag is read at boot: enabling or
+  // disabling needs a restart, and when off the routes do not exist at all.
+  if (config.LOGIN_CODE_ENABLED) {
+    fastify.register(
+      async (instance) => {
+        await LoginCodesRoutes(instance, LoginCodesBuildRoutesOptions(config));
+      },
+      { prefix: "/api/users/login-codes" },
+    );
+  }
   fastify.register(new ProjectsRoutes().getRoutes, {
     prefix: "/api/projects",
   });
