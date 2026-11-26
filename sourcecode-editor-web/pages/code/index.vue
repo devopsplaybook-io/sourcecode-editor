@@ -137,6 +137,7 @@ import FileTree from "~/components/FileTree.vue";
 import { AuthService } from "~~/services/AuthService";
 import Config from "~~/services/Config.ts";
 import { EventBus, EventTypes, handleError } from "~~/services/EventBus";
+import { registerUnsavedWorkFlusher } from "~~/utils/appUpdateGuard";
 import { UtilsDecompressData, UtilsCompressData } from "~~/services/Utils";
 import { CodePreferencesService } from "~~/services/CodePreferencesService";
 import debounce from "lodash/debounce";
@@ -163,6 +164,7 @@ export default {
       unbindFns: [],
       keydownHandler: null,
       beforeUnloadHandler: null,
+      unregisterUnsavedWorkFlusher: null,
     };
   },
   computed: {
@@ -198,6 +200,10 @@ export default {
     await GitProjectsStore().fetch();
     this.loadLastSelectedProject();
     this.debouncedOnFileContentChange = debounce(this.saveTabContent, 1000);
+    // Let the shared PWA update prompt persist dirty buffers before a reload.
+    this.unregisterUnsavedWorkFlusher = registerUnsavedWorkFlusher(() =>
+      this.flushUnsavedTabs(),
+    );
     this.bindRepositoryEvents();
     this.keydownHandler = (e) => this.onGlobalKeydown(e);
     window.addEventListener("keydown", this.keydownHandler);
@@ -205,6 +211,10 @@ export default {
     window.addEventListener("beforeunload", this.beforeUnloadHandler);
   },
   beforeUnmount() {
+    if (this.unregisterUnsavedWorkFlusher) {
+      this.unregisterUnsavedWorkFlusher();
+      this.unregisterUnsavedWorkFlusher = null;
+    }
     if (this.unbindFns) {
       this.unbindFns.forEach((fn) => fn());
       this.unbindFns = [];
@@ -450,6 +460,29 @@ export default {
           this.saveState = this.tabs.some((other) => other.dirty)
             ? "unsaved"
             : "saved";
+        }
+      }
+    },
+    async flushUnsavedTabs() {
+      // Drop the pending autosave: this flush persists every dirty buffer
+      // itself, and a debounce firing later would only duplicate the save.
+      if (this.debouncedOnFileContentChange) {
+        this.debouncedOnFileContentChange.cancel();
+      }
+      for (const tab of [...this.tabs]) {
+        let waited = 0;
+        // Wait for an autosave already in flight to settle (max 10s).
+        while (tab.saving && waited < 10000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
+        if (tab.saving) {
+          throw new Error(`Tab ${tab.path} is still saving`);
+        }
+        if (!tab.dirty) continue;
+        await this.saveTabContent(tab);
+        if (tab.dirty) {
+          throw new Error(`Tab ${tab.path} could not be saved`);
         }
       }
     },
